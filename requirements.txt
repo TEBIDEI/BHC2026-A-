@@ -7,3 +7,4 @@ pytest>=8.0
 Flask-Migrate>=4.0
 tzdata>=2024.1
 GeoAlchemy2>=0.15
+gunicorn>=22.0

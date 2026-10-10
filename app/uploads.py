@@ -1,8 +1,11 @@
+import io
 import uuid
 from pathlib import Path
 
 from flask import current_app
 from PIL import Image, ImageOps, UnidentifiedImageError
+
+from .models import StoredImage, db
 
 ALLOWED_EXTENSIONS = {".jpg", ".jpeg", ".png", ".webp", ".gif", ".bmp", ".avif"}
 
@@ -26,15 +29,23 @@ def save_image(file_storage):
     side = current_app.config["MAX_IMAGE_SIDE"]
     img.thumbnail((side, side))
 
-    upload_dir = Path(current_app.config["UPLOAD_DIR"])
-    upload_dir.mkdir(parents=True, exist_ok=True)
+    buffer = io.BytesIO()
+    img.save(buffer, "WEBP", quality=85)
     name = f"{uuid.uuid4().hex}.webp"
-    img.save(upload_dir / name, "WEBP", quality=85)
+    db.session.add(StoredImage(name=name, mime="image/webp", data=buffer.getvalue()))
     return name
 
 
-def delete_image(filename):
-    if not filename:
+def delete_image(name):
+    if not name:
         return
-    path = Path(current_app.config["UPLOAD_DIR"]) / filename
-    path.unlink(missing_ok=True)
+    for obj in list(db.session.new):
+        if isinstance(obj, StoredImage) and obj.name == name:
+            db.session.expunge(obj)
+            return
+    with db.session.no_autoflush:
+        stored = db.session.get(StoredImage, name)
+    if stored:
+        db.session.delete(stored)
+    legacy = Path(current_app.config["UPLOAD_DIR"]) / name
+    legacy.unlink(missing_ok=True)

@@ -38,6 +38,7 @@ def game_state(game):
                 "distance_km": round(gs.distance_km, 1),
                 "score": gs.score,
                 "answer": {**gs.question.answer_dict(), "area": areas.get(gs.question_id)} if gs.question else None,
+                "closest": _closest(gs),
             }
             for gs in game.guesses
         ]
@@ -47,6 +48,13 @@ def game_state(game):
         question = db.session.get(Question, game.question_ids[game.current_round])
         state["question"] = question.public_dict() if question else None
     return state
+
+
+def _closest(guess_row):
+    if not guess_row.question:
+        return None
+    _, (lat, lng) = answer_distance(guess_row.question, guess_row.lat, guess_row.lng)
+    return {"lat": lat, "lng": lng}
 
 
 def ranking_info(game):
@@ -133,8 +141,6 @@ def get_game(game_id):
     return jsonify(game_state(game))
 
 
-# cebularz: with_for_update jest, bo Hubi klikał „Zgadnij” jak pojebany i robił dwie rundy naraz
-# Hubi: to była mysz, nie ja
 @bp.post("/games/<game_id>/guess")
 def guess(game_id):
     game = _load_game(game_id, lock=True)

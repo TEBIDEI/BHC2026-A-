@@ -154,3 +154,26 @@ def test_admin_question_facts_and_sets(client, app):
         q = db.session.get(Question, 1)
         assert q.facts == [{"label": "Region", "value": "Małopolska"}]
         assert q.sets == []
+
+
+def test_admin_upload_is_stored_in_database(client, app):
+    import io
+
+    from PIL import Image
+
+    from app.models import StoredImage
+
+    buffer = io.BytesIO()
+    Image.new("RGB", (40, 30), "red").save(buffer, "PNG")
+    buffer.seek(0)
+    data = {
+        "title": "Z pliku", "location_name": "Kraków", "lat": "50", "lng": "20", "category": "kuchnia",
+        "active": "on", "area_level": "punkt", "image_file": (buffer, "foto.png"),
+    }
+    assert client.post("/admin/new", data=data, content_type="multipart/form-data").status_code == 302
+    question = Question.query.filter_by(title="Z pliku").one()
+    assert db.session.get(StoredImage, question.image_filename) is not None
+    with app.test_request_context():
+        src = question.image_src
+    res = client.get(src)
+    assert res.status_code == 200 and res.mimetype == "image/webp"

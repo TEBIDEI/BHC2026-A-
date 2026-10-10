@@ -121,7 +121,7 @@ class Question(db.Model):
     @property
     def image_src(self):
         if self.image_filename:
-            return url_for("static", filename=f"uploads/{self.image_filename}")
+            return url_for("media", name=self.image_filename)
         return self.image_url
 
     def public_dict(self):
@@ -190,3 +190,12 @@ class Guess(db.Model):
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
 
     question = db.relationship("Question", passive_deletes=True)
+
+
+class StoredImage(db.Model):
+    __tablename__ = "stored_images"
+
+    name = db.Column(db.String(64), primary_key=True)
+    mime = db.Column(db.String(32), nullable=False, default="image/webp")
+    data = db.Column(db.LargeBinary, nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)

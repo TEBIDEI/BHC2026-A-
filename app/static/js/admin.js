@@ -288,7 +288,7 @@
     const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
     if (/^https?:\/\//.test(url)) { urlInput.value = url.trim(); fileInput.value = ""; showPreview(url.trim()); }
   });
-  // Hubi: Ctrl+V działa, cebularz, nie musisz zapisywać screena na pulpit jak dziadek
+
   document.addEventListener("paste", (e) => {
     const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
     if (!item) return;

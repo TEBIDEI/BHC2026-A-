@@ -100,6 +100,36 @@ Przejście ze starego obrazu `postgres:16-alpine` na PostGIS zachowuje dane (ten
 - przykładowo: 250 km ≈ 3660, 500 km ≈ 2620, 1000 km ≈ 1340, 2000 km ≈ 350 pkt
 
 
+## Deployment na Heroku
+
+Projekt ma `Procfile` (gunicorn + migracje w fazie release) i `.python-version`. Zdjęcia wgrywane w panelu są trzymane w bazie (tabela `stored_images`, serwowane z `/media/<nazwa>`), bo dysk dyna Heroku jest kasowany przy każdym restarcie.
+
+```bash
+heroku create nazwa-aplikacji
+```
+
+```bash
+heroku addons:create heroku-postgresql:essential-0
+```
+
+```bash
+heroku config:set SECRET_KEY=wygeneruj-dlugi-losowy-ciag ADMIN_PASSWORD=haslo-do-panelu
+```
+
+```bash
+git push heroku feature/cultureguessr-app:main
+```
+
+```bash
+heroku run flask --app app seed
+```
+
+- migracje (`flask db upgrade`, w tym `CREATE EXTENSION postgis`) uruchamia faza `release` przy każdym deployu; Heroku Postgres obsługuje PostGIS
+- `DATABASE_URL` z Heroku (`postgres://...`) jest poprawiany automatycznie, połączenie idzie przez SSL
+- bez własnego `SECRET_KEY` aplikacja na Heroku nie wystartuje; na produkcji ustaw też `ADMIN_PASSWORD`
+- zdjęcia wgrane lokalnie przed tą zmianą przenosi do bazy `flask --app app import-uploads`
+- gunicorn nie działa na Windowsie; lokalnie dalej używaj `flask run`
+
 ## Instalacja na telefonie (PWA)
 
 Przeglądarki pozwalają zainstalować aplikację tylko przez HTTPS (lub na `localhost`). Do testów z telefonu najprościej wystawić lokalny serwer tunelem, np.:

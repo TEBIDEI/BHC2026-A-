@@ -13,7 +13,6 @@ ALL_SLUG = "wszystko"
 PERIODS = {"zawsze": "Wszech czasów", "tydzien": "Ten tydzień"}
 
 
-# Filip: tydzień zaczyna się w poniedziałek, nie w niedzielę, nie jesteśmy w Ameryce
 def week_start(now=None):
     local = (now or datetime.now(timezone.utc)).astimezone(TZ)
     monday = datetime.combine(local.date() - timedelta(days=local.weekday()), time(), TZ)

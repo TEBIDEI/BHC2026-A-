@@ -1,3 +1,5 @@
+import json
+from pathlib import Path
 from urllib.parse import quote
 
 
@@ -28,7 +30,6 @@ def q(title, category, location_name, lat, lng, description, image, credit, fact
 STROJE, SMAKI, JEZYKI, ZABYTKI = "stroje-ludowe", "smaki-europy", "jezyki-i-pisma", "zabytki"
 
 QUESTIONS = [
-    # cebularz: ruskie > wszystko inne na tej liście, nie dyskutuję
     q("Pierogi", "kuchnia", "Polska", 52.2297, 21.0122,
       "Pierogi z farszem z ziemniaków i twarogu nazywa się w Polsce „ruskimi”.",
       "Pierogi in Warsaw, 2019.jpg", "Chris Olszewski, CC BY-SA 4.0, Wikimedia Commons",
@@ -65,8 +66,6 @@ QUESTIONS = [
       [("Główne składniki", "gruyère, vacherin fribourgeois, białe wino, czosnek, kirsch; chleb do maczania"),
        ("Kiedy się je", "zimą, często w górskich schroniskach"),
        ("Pochodzenie nazwy", "z francuskiego „fondre”, czyli topić")], [SMAKI]),
-    # Hubi: kto zjadł haggis na wyjeździe w Edynburgu, niech się przyzna. Michał, patrzę na ciebie
-    # Michał: byłem głodny, kurwa, co miałem zrobić
     q("Haggis, neeps and tatties", "kuchnia", "Edynburg, Szkocja", 55.9533, -3.1883,
       "Haggis je się tradycyjnie 25 stycznia, w noc poety Roberta Burnsa.",
       "Haggis neeps and tatties.jpg", "Biology Big Brother, CC BY 2.0, Wikimedia Commons",
@@ -289,3 +288,7 @@ QUESTIONS = [
        ("Materiał", "drewno, kamień"),
        ("Ciekawostka", "w Chinach zbudowano kopię całego miasteczka")], [ZABYTKI]),
 ]
+
+EXTRA_FILE = Path(__file__).resolve().parent / "seed_extra.json"
+if EXTRA_FILE.exists():
+    QUESTIONS += json.loads(EXTRA_FILE.read_text(encoding="utf-8"))

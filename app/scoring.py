@@ -11,8 +11,6 @@ def haversine_km(lat1, lng1, lat2, lng2):
     return 2 * EARTH_RADIUS_KM * math.asin(math.sqrt(a))
 
 
-# Hubi: skala 750 km, bo przy 500 cebularz miał zero punktów w każdej rundzie
-# cebularz: spierdalaj, mapa mi się wtedy nie załadowała
 def score_from_distance(distance, max_score=5000, scale_km=750, perfect_radius_km=15):
     if distance <= perfect_radius_km:
         return max_score

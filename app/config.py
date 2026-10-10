@@ -3,6 +3,18 @@ from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
+ON_HEROKU = "DYNO" in os.environ
+
+
+def database_url():
+    url = os.environ.get("DATABASE_URL", "postgresql+psycopg2://geo:geo@localhost:5433/cultureguessr")
+    if url.startswith("postgres://"):
+        url = "postgresql+psycopg2://" + url[len("postgres://"):]
+    elif url.startswith("postgresql://"):
+        url = "postgresql+psycopg2://" + url[len("postgresql://"):]
+    if ON_HEROKU and "sslmode=" not in url:
+        url += ("&" if "?" in url else "?") + "sslmode=require"
+    return url
 
 
 class Config:
@@ -10,10 +22,9 @@ class Config:
     SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SECURE = ON_HEROKU
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
-    SQLALCHEMY_DATABASE_URI = os.environ.get(
-        "DATABASE_URL", "postgresql+psycopg2://geo:geo@localhost:5433/cultureguessr"
-    )
+    SQLALCHEMY_DATABASE_URI = database_url()
     SQLALCHEMY_ENGINE_OPTIONS = {"pool_pre_ping": True}
 
     UPLOAD_DIR = BASE_DIR / "static" / "uploads"

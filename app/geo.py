@@ -7,7 +7,6 @@ from sqlalchemy.dialects.postgresql import array
 from .models import Question, db
 from .scoring import haversine_km
 
-# Michał: kto ruszy te liczby bez pytania, stawia piwo całej ekipie
 SIMPLIFY = {"miasto": 0.0003, "powiat": 0.001, "region": 0.003, "panstwo": 0.006}
 OUTPUT_DECIMALS = 3
 
@@ -62,7 +61,6 @@ def _extract_geometries(data):
     return []
 
 
-# Filip: PostGIS liczy na elipsoidzie. Kto mi jeszcze raz powie, że wystarczy Pitagoras, dostaje kalkulatorem w łeb
 def answer_distance(question, lat, lng):
     if question.id is None or question.area is None:
         return haversine_km(lat, lng, question.lat, question.lng), (question.lat, question.lng)

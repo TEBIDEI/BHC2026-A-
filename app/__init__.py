@@ -2,16 +2,21 @@ from pathlib import Path
 from zoneinfo import ZoneInfo
 
 import click
-from flask import Flask, render_template, send_from_directory
+from flask import Flask, abort, render_template, send_from_directory
 from flask_migrate import Migrate, upgrade
+from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .config import Config
-from .models import Question, QuestionSet, db
+from .config import ON_HEROKU, Config
+from .models import Question, QuestionSet, StoredImage, db
 
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
+    if ON_HEROKU:
+        if app.config["SECRET_KEY"] == "dev-secret":
+            raise RuntimeError("Ustaw SECRET_KEY: heroku config:set SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')")
+        app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     db.init_app(app)
     Migrate(app, db, directory=str(Path(__file__).resolve().parent.parent / "migrations"))
 
@@ -55,6 +60,18 @@ def create_app(config_class=Config):
         response.headers["Cache-Control"] = "no-cache"
         return response
 
+    @app.get("/media/<name>")
+    def media(name):
+        stored = db.session.get(StoredImage, name)
+        if stored is None:
+            legacy = Path(app.config["UPLOAD_DIR"]) / name
+            if legacy.is_file():
+                return send_from_directory(app.config["UPLOAD_DIR"], name)
+            abort(404)
+        response = app.response_class(stored.data, mimetype=stored.mime)
+        response.headers["Cache-Control"] = "public, max-age=31536000, immutable"
+        return response
+
     @app.get("/manifest.webmanifest")
     def manifest():
         return send_from_directory(
@@ -79,6 +96,16 @@ def register_cli(app):
         db.session.commit()
         upgrade()
         click.echo("Baza wyczyszczona.")
+
+    @app.cli.command("import-uploads", help="Przenosi zdjęcia z app/static/uploads do bazy.")
+    def import_uploads():
+        moved = 0
+        for path in Path(app.config["UPLOAD_DIR"]).glob("*.webp"):
+            if not db.session.get(StoredImage, path.name):
+                db.session.add(StoredImage(name=path.name, mime="image/webp", data=path.read_bytes()))
+                moved += 1
+        db.session.commit()
+        click.echo(f"Przeniesiono do bazy: {moved}.")
 
     @app.cli.command("seed")
     def seed():

@@ -7,7 +7,6 @@ from .models import User, db
 
 bp = Blueprint("auth", __name__)
 
-# Hubi: emoji w nicku nie będzie, nie płacz Michał
 USERNAME_RE = re.compile(r"^[\w.-]{3,20}$")
 MIN_PASSWORD = 6
 

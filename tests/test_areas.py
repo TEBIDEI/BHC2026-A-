@@ -7,7 +7,6 @@ from app.geo import AreaError, answer_distance, area_from_geojson
 from app.models import Question, db
 from app.seed_data import QUESTIONS
 
-# Michał: testy na prawdziwym PostGIS, bo SQLite kłamał jak cebularz o swoim wyniku w rankingu
 SQUARE = {
     "type": "Polygon",
     "coordinates": [[[19.445, 49.5647], [20.445, 49.5647], [20.445, 50.5647], [19.445, 50.5647], [19.445, 49.5647]]],

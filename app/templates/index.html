@@ -5,12 +5,19 @@
   <div class="stats" id="stats" hidden>
     <span>runda <b id="stat-round">1 z 10</b></span>
     <span><b id="stat-score">0</b> pkt</span>
+    <button class="exit-btn" type="button" id="exit-btn" aria-label="Wyjdź z gry do menu">Wyjdź</button>
   </div>
   {% include "_usernav.html" %}
 </header>
 
 <main>
-    <section class="start" id="screen-start">
+  <section class="start" id="screen-start">
+    <div class="start-bg map-art" aria-hidden="true">
+      <svg viewBox="0 0 800 640" preserveAspectRatio="xMidYMid slice">
+        {% include "_map_icons.html" %}
+        {% include "_europe_map.html" %}
+      </svg>
+    </div>
     <form class="page" id="start-form">
       <p class="hand start-kicker">notatnik podróżnika po Europie</p>
       <h1>Skąd to pochodzi?</h1>
@@ -18,28 +25,33 @@
 
       <fieldset>
         <legend>Wybierz zestaw</legend>
-        <div class="toc" id="set-list"><p class="muted">Wczytuję zestawy…</p></div>
-      </fieldset>
-
-      <fieldset>
-        <legend>Liczba rund</legend>
-        <div class="chips">
-          <label class="chip"><input type="radio" name="rounds" value="5"><span>5</span></label>
-          <label class="chip"><input type="radio" name="rounds" value="10" checked><span>10</span></label>
+        <div class="rail-wrap">
+          <div class="set-rail" id="set-list"><p class="muted">Wczytuję zestawy…</p></div>
         </div>
       </fieldset>
 
-      <button class="btn btn-primary" type="submit" id="start-btn">Ruszaj w drogę</button>
-      {% if current_user %}
-        <p class="note">Grasz jako <b>{{ current_user.username }}</b>. Gra na {{ config.ROUNDS_PER_GAME }} rund trafia do rankingu zestawu.</p>
-      {% else %}
-        <p class="note">Grasz jako gość. <a href="{{ url_for('auth.login') }}">Zaloguj się</a>, żeby trafić do rankingu.</p>
-      {% endif %}
+      <div class="start-options" id="start-options" hidden>
+        <p class="chosen">Wybrany zestaw: <b id="chosen-name"></b></p>
+        <fieldset>
+          <legend>Liczba rund</legend>
+          <div class="chips">
+            <label class="chip"><input type="radio" name="rounds" value="5"><span>5</span></label>
+            <label class="chip"><input type="radio" name="rounds" value="10" checked><span>10</span></label>
+          </div>
+        </fieldset>
+
+        <button class="btn btn-primary" type="submit" id="start-btn">Ruszaj w drogę</button>
+        {% if current_user %}
+          <p class="note">Grasz jako <b>{{ current_user.username }}</b>. Gra na {{ config.ROUNDS_PER_GAME }} rund trafia do rankingu zestawu.</p>
+        {% else %}
+          <p class="note">Grasz jako gość. <a href="{{ url_for('auth.login') }}">Zaloguj się</a>, żeby trafić do rankingu.</p>
+        {% endif %}
+      </div>
       <p class="form-error" id="start-error" hidden></p>
     </form>
   </section>
 
-    <section class="play" id="screen-play" hidden>
+  <section class="play" id="screen-play" hidden>
     <div class="photo" id="photo" title="Kliknij, aby powiększyć">
       <figure class="print" id="print">
         <img id="photo-img" alt="Zdjęcie do odgadnięcia" class="loading">
@@ -87,9 +99,20 @@
   </section>
 </main>
 
-<div class="lightbox" id="lightbox" hidden><img alt=""></div>
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Powiększone zdjęcie" hidden>
+  <div class="zoom-stage"><img alt="" draggable="false"></div>
+  <div class="zoom-bar">
+    <button type="button" data-zoom="out" aria-label="Oddal">-</button>
+    <span class="zoom-level">100%</span>
+    <button type="button" data-zoom="in" aria-label="Przybliż">+</button>
+    <button type="button" data-zoom="reset">Dopasuj</button>
+    <button type="button" data-zoom="close" aria-label="Zamknij">×</button>
+  </div>
+  <p class="zoom-hint">kółko myszy albo dwa palce: przybliżanie · przeciągnij: przesuwanie · dwuklik: zoom</p>
+</div>
 {% endblock %}
 
 {% block scripts %}
+<script src="{{ url_for('static', filename='js/zoom.js') }}"></script>
 <script src="{{ url_for('static', filename='js/game.js') }}"></script>
 {% endblock %}

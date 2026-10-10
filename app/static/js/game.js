@@ -45,6 +45,7 @@
 
     $("stats").hidden = screen !== "screen-play";
     $("usernav").hidden = screen === "screen-play";
+    if (screen === "screen-start") layoutRail();
   }
 
   const X_SVG = '<svg class="pin-x" viewBox="0 0 26 26"><path class="halo" d="M6 6L20 20M20 6L6 20"/><path class="ink" d="M6 6L20 20M20 6L6 20"/></svg>';
@@ -75,6 +76,146 @@
     return m;
   }
 
+  const RAIL_SPEED = 22;
+  const rail = { el: null, pos: 0, segment: 0, count: 0, hold: false, resumeAt: 0, selected: false, last: 0 };
+  const calm = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  const EU_FLAG = (() => {
+    const star = (cx, cy, r) => {
+      const pts = [];
+      for (let k = 0; k < 10; k++) {
+        const a = -Math.PI / 2 + (k * Math.PI) / 5;
+        const rad = k % 2 ? r * 0.382 : r;
+        pts.push(`${(cx + rad * Math.cos(a)).toFixed(2)},${(cy + rad * Math.sin(a)).toFixed(2)}`);
+      }
+      return `<polygon points="${pts.join(" ")}"/>`;
+    };
+    const stars = Array.from({ length: 12 }, (_, i) => {
+      const a = (i * Math.PI) / 6;
+      return star(150 + 66.7 * Math.sin(a), 100 - 66.7 * Math.cos(a), 11.1);
+    }).join("");
+    return `<svg class="eu-flag" viewBox="0 0 300 200" preserveAspectRatio="xMidYMid slice" role="img" aria-label="Flaga Europy"><rect width="300" height="200" fill="#003399"/><g fill="#FFCC00">${stars}</g></svg>`;
+  })();
+
+  function makeTile(s, clone) {
+    const label = document.createElement("label");
+    label.className = "set-tile";
+    label.innerHTML = `
+      <input type="radio" name="set">
+      <span class="tile-photo">${s.cover ? '<img alt="" loading="lazy">' : EU_FLAG}</span>
+      <span class="tile-body"><b></b><small></small><span class="count"></span></span>`;
+    const input = label.querySelector("input");
+    input.value = s.slug;
+    if (clone) {
+      label.setAttribute("aria-hidden", "true");
+      input.tabIndex = -1;
+    }
+    if (s.cover) label.querySelector("img").src = thumb(s.cover);
+    label.querySelector("b").textContent = s.name;
+    label.querySelector("small").textContent = s.description || "";
+    label.querySelector(".count").textContent = `${s.count} ${plural(s.count, "pytanie", "pytania", "pytań")}`;
+    return label;
+  }
+
+  function centreTile(tile, smooth) {
+    const el = rail.el;
+    const target = tile.offsetLeft - (el.clientWidth - tile.offsetWidth) / 2;
+    if (smooth) el.scrollTo({ left: target, behavior: "smooth" });
+    else el.scrollLeft = target;
+    rail.pos = target;
+  }
+
+  function wrapRail() {
+    const el = rail.el;
+    if (!rail.segment) return;
+    if (rail.pos < rail.segment * 0.5) rail.pos += rail.segment;
+    else if (rail.pos > rail.segment * 1.5) rail.pos -= rail.segment;
+    el.scrollLeft = rail.pos;
+  }
+
+  function railLoop(t) {
+    const dt = rail.last ? Math.min(0.05, (t - rail.last) / 1000) : 0;
+    rail.last = t;
+    const idle = !rail.hold && !rail.selected && performance.now() > rail.resumeAt;
+    if (idle && !calm && !$("screen-start").hidden) {
+      rail.pos += RAIL_SPEED * dt;
+      wrapRail();
+    }
+    requestAnimationFrame(railLoop);
+  }
+
+  function pauseRail(ms) {
+    rail.resumeAt = performance.now() + ms;
+  }
+
+  function chooseSet(input, smooth) {
+    input.checked = true;
+    rail.selected = true;
+    centreTile(input.closest(".set-tile"), smooth);
+    $("chosen-name").textContent = input.closest(".set-tile").querySelector("b").textContent;
+    const options = $("start-options");
+    const wasHidden = options.hidden;
+    options.hidden = false;
+    if (wasHidden && smooth) options.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  }
+
+  function middleTiles() {
+    return [...rail.el.children].slice(rail.count, rail.count * 2);
+  }
+
+  function layoutRail() {
+    if (!rail.count || $("screen-start").hidden) return;
+    const tiles = [...rail.el.children];
+    rail.segment = tiles[rail.count].offsetLeft - tiles[0].offsetLeft;
+    const checked = rail.el.querySelector("input:checked");
+    const middle = middleTiles();
+    const anchor = checked ? checked.closest(".set-tile")
+      : middle.find((t) => t.querySelector("input").value === "wszystko") || middle[0];
+    centreTile(anchor, false);
+    wrapRail();
+  }
+
+  function setupRail(el) {
+    rail.el = el;
+    el.addEventListener("pointerenter", (e) => { if (e.pointerType === "mouse") rail.hold = true; });
+    el.addEventListener("pointerleave", (e) => { if (e.pointerType === "mouse") rail.hold = false; });
+    el.addEventListener("touchstart", () => pauseRail(4000), { passive: true });
+    el.addEventListener("focusin", () => { rail.hold = true; });
+    el.addEventListener("focusout", () => { rail.hold = false; });
+    el.addEventListener("scroll", () => {
+      if (Math.abs(el.scrollLeft - rail.pos) > 2) {
+        rail.pos = el.scrollLeft;
+        if (rail.segment && (rail.pos < rail.segment * 0.5 || rail.pos > rail.segment * 1.5)) wrapRail();
+      }
+    }, { passive: true });
+
+    let drag = null;
+    el.addEventListener("pointerdown", (e) => {
+      if (e.pointerType !== "mouse" || e.button !== 0) return;
+      drag = { x: e.clientX, start: el.scrollLeft, moved: false };
+    });
+    window.addEventListener("pointermove", (e) => {
+      if (!drag) return;
+      const dx = e.clientX - drag.x;
+      if (Math.abs(dx) > 5) drag.moved = true;
+      if (drag.moved) {
+        rail.pos = drag.start - dx;
+        el.scrollLeft = rail.pos;
+      }
+    });
+    window.addEventListener("pointerup", () => {
+      if (drag && drag.moved) {
+        wrapRail();
+        el.addEventListener("click", (e) => { e.preventDefault(); e.stopPropagation(); }, { capture: true, once: true });
+      }
+      drag = null;
+    });
+    el.addEventListener("change", (e) => {
+      if (e.target.name === "set") chooseSet(e.target, true);
+    });
+    requestAnimationFrame(railLoop);
+  }
+
   async function loadSets() {
     const list = $("set-list");
     try {
@@ -82,25 +223,18 @@
       const wanted = new URLSearchParams(location.search).get("zestaw");
       const sets = data.sets.filter((s) => s.count);
       list.innerHTML = "";
-      sets.forEach((s, i) => {
-        const label = document.createElement("label");
-        label.className = "toc-item";
-        label.innerHTML = `
-          <input type="radio" name="set">
-          ${s.cover ? '<img alt="" loading="lazy">' : '<span class="blank"></span>'}
-          <span><b></b><small></small></span>
-          <span class="count"></span>`;
-        const input = label.querySelector("input");
-        input.value = s.slug;
-        input.checked = wanted ? s.slug === wanted : i === 0;
-        if (s.cover) label.querySelector("img").src = thumb(s.cover);
-        label.querySelector("b").textContent = s.name;
-        label.querySelector("small").textContent = s.description || "";
-        label.querySelector(".count").textContent = `${s.count} ${plural(s.count, "pytanie", "pytania", "pytań")}`;
-        list.appendChild(label);
-      });
-      if (!list.querySelector("input:checked") && sets.length) list.querySelector("input").checked = true;
-      if (!sets.length) showStartError("Brak pytań w bazie. Dodaj je w panelu /admin albo uruchom „flask seed”.");
+      if (!sets.length) {
+        showStartError("Brak pytań w bazie. Dodaj je w panelu /admin albo uruchom „flask seed”.");
+        return;
+      }
+      for (let copy = 0; copy < 3; copy++) {
+        for (const s of sets) list.appendChild(makeTile(s, copy !== 1));
+      }
+      if (!rail.el) setupRail(list);
+      rail.count = sets.length;
+      const preset = wanted && middleTiles().find((t) => t.querySelector("input").value === wanted);
+      if (preset) chooseSet(preset.querySelector("input"), false);
+      layoutRail();
     } catch (e) {
       list.innerHTML = "";
       showStartError("Nie udało się połączyć z serwerem.");
@@ -249,14 +383,12 @@
     dl.hidden = !facts.length;
   }
 
-  // cebularz: „w samo sedno!” widziałem raz w życiu i to był przypadek
   function distanceNote(km, score, max, isArea) {
     if (km === 0 && isArea) return "w granicach obszaru!";
     if (score >= max) return "w samo sedno!";
     return (km < 100 ? "blisko, " : "") + fmtKm(km) + " od celu";
   }
 
-  // Michał: dwie godziny szukałem, czemu pinezka chowa się pod kartką. DWIE GODZINY, kurwa.
   function fitAroundResult(bounds) {
     const mapBox = $("map").getBoundingClientRect();
     const card = $("result").getBoundingClientRect();
@@ -305,10 +437,11 @@
       bounds.extend(g);
       if (r.answer) {
         const a = L.latLng(r.answer.lat, r.answer.lng);
-        if (r.answer.area) {
-          bounds.extend(L.geoJSON(r.answer.area, AREA_STYLE).addTo(summaryLayer).getBounds());
-        } else {
-          L.polyline([g, a], LINE_STYLE).addTo(summaryLayer);
+        const target = r.closest ? L.latLng(r.closest.lat, r.closest.lng) : a;
+        if (r.answer.area) bounds.extend(L.geoJSON(r.answer.area, AREA_STYLE).addTo(summaryLayer).getBounds());
+        if (r.distance_km > 0) {
+          L.polyline([g, target], LINE_STYLE).addTo(summaryLayer);
+          if (r.answer.area) L.marker(target, { icon: pin("answer"), keyboard: false }).addTo(summaryLayer);
         }
         L.marker(a, { icon: pin("num", r.round), keyboard: false })
           .bindPopup(`<b>${escapeHtml(r.answer.title)}</b><br>${escapeHtml(r.answer.location_name)}`)
@@ -323,6 +456,10 @@
         <span class="t"><b></b><span></span></span>
         <span class="s">${fmt(r.score)}<span>${fmtKm(r.distance_km)}</span></span>`;
       li.querySelector("img").src = r.answer ? thumb(r.answer.image) : "";
+      if (r.answer) {
+        li.querySelector("img").dataset.full = r.answer.image;
+        li.querySelector("img").title = "Kliknij, aby powiększyć";
+      }
       li.querySelector(".t b").textContent = r.answer ? r.answer.title : "(pytanie usunięte)";
       li.querySelector(".t span").textContent = r.answer ? r.answer.location_name : "";
       list.appendChild(li);
@@ -371,16 +508,29 @@
   $("again-btn").addEventListener("click", startGame);
   $("menu-btn").addEventListener("click", () => show("screen-start"));
 
-  $("photo").addEventListener("click", () => {
-    const img = $("photo-img");
-    if (!img.src) return;
-    $("lightbox").querySelector("img").src = img.src;
-    $("lightbox").hidden = false;
+  $("photo").addEventListener("click", () => window.openZoom($("photo-img").src));
+  $("summary-rounds").addEventListener("click", (e) => {
+    const img = e.target.closest("img[data-full]");
+    if (img) window.openZoom(img.dataset.full);
   });
-  $("lightbox").addEventListener("click", () => { $("lightbox").hidden = true; });
+
+  function exitGame() {
+    if (!game || game.finished) return show("screen-start");
+    if (!confirm("Przerwać grę? Ta gra nie trafi do rankingu.")) return;
+    store.clear();
+    game = null;
+    show("screen-start");
+  }
+  $("exit-btn").addEventListener("click", exitGame);
+  document.querySelector(".topbar .brand").addEventListener("click", (e) => {
+    if ($("screen-start").hidden) {
+      e.preventDefault();
+      exitGame();
+    }
+  });
 
   document.addEventListener("keydown", (e) => {
-    if (!$("lightbox").hidden && e.key === "Escape") { $("lightbox").hidden = true; return; }
+    if (!$("lightbox").hidden) return;
     if ($("screen-play").hidden || (e.key !== "Enter" && e.key !== " ")) return;
     if (e.target.closest("button, input, a")) return;
     e.preventDefault();
