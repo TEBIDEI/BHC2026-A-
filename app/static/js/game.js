@@ -106,6 +106,7 @@
       <span class="tile-body"><b></b><small></small><span class="count"></span></span>`;
     const input = label.querySelector("input");
     input.value = s.slug;
+    input.dataset.count = s.count;
     if (clone) {
       label.setAttribute("aria-hidden", "true");
       input.tabIndex = -1;
@@ -156,6 +157,7 @@
     const options = $("start-options");
     const wasHidden = options.hidden;
     options.hidden = false;
+    updateRounds();
     if (wasHidden && smooth) options.scrollIntoView({ behavior: "smooth", block: "nearest" });
   }
 
@@ -220,6 +222,7 @@
     const list = $("set-list");
     try {
       const data = await api("/sets");
+      Object.assign(roundsCfg, { max: data.max_rounds, ranked: data.ranked_rounds, loggedIn: data.logged_in });
       const wanted = new URLSearchParams(location.search).get("zestaw");
       const sets = data.sets.filter((s) => s.count);
       list.innerHTML = "";
@@ -246,14 +249,78 @@
     $("start-error").hidden = !msg;
   }
 
+  const roundsCfg = { max: 200, ranked: 10, loggedIn: false };
+
+  function chosenSet() {
+    return $("start-form").querySelector("input[name=set]:checked");
+  }
+
+  function roundsLimit() {
+    const set = chosenSet();
+    return Math.min(roundsCfg.max, set ? Number(set.dataset.count) : roundsCfg.max);
+  }
+
+  function chosenRounds() {
+    const value = new FormData($("start-form")).get("rounds");
+    return value === "custom" ? Number($("rounds-custom").value) : Number(value);
+  }
+
+  function updateRounds() {
+    const limit = roundsLimit();
+    const custom = $("rounds-custom");
+    custom.max = limit;
+    const radios = [...document.querySelectorAll("input[name=rounds]")];
+    for (const r of radios) if (r.value !== "custom") r.disabled = Number(r.value) > limit;
+    const checked = radios.find((r) => r.checked);
+    if (checked && checked.disabled) {
+      radios.find((r) => r.value === "custom").checked = true;
+      custom.value = limit;
+    }
+    const isCustom = radios.find((r) => r.checked)?.value === "custom";
+    $("custom-rounds").hidden = !isCustom;
+
+    const n = chosenRounds();
+    const set = chosenSet();
+    const rankedRounds = Math.min(roundsCfg.ranked, set ? Number(set.dataset.count) : roundsCfg.ranked);
+    let msg = "";
+    if (isCustom && !(Number.isInteger(n) && n >= 1 && n <= limit)) {
+      msg = `wpisz liczbę od 1 do ${limit}`;
+    } else if (roundsCfg.loggedIn && n !== rankedRounds) {
+      msg = `do rankingu liczy się tylko gra na ${rankedRounds} ${plural(rankedRounds, "rundę", "rundy", "rund")}`;
+    }
+    $("rounds-hint").textContent = msg;
+    $("rounds-hint").hidden = !msg;
+  }
+
+  $("start-form").addEventListener("change", (e) => {
+    if (e.target.name !== "rounds") return;
+    updateRounds();
+    if (e.target.value === "custom") $("rounds-custom").select();
+  });
+  $("rounds-custom").addEventListener("input", updateRounds);
+  $("custom-rounds").addEventListener("click", (e) => {
+    const step = Number(e.target.closest("button[data-step]")?.dataset.step);
+    if (!step) return;
+    const input = $("rounds-custom");
+    const current = Number.isInteger(Number(input.value)) ? Number(input.value) : 1;
+    input.value = Math.max(1, Math.min(roundsLimit(), current + step));
+    updateRounds();
+  });
+
   async function startGame() {
     const form = new FormData($("start-form"));
+    const rounds = chosenRounds();
+    const limit = roundsLimit();
     showStartError("");
+    if (!(Number.isInteger(rounds) && rounds >= 1 && rounds <= limit)) {
+      showStartError(`Liczba rund musi być od 1 do ${limit}.`);
+      return;
+    }
     $("start-btn").disabled = true;
     try {
       game = await api("/games", {
         method: "POST",
-        body: JSON.stringify({ set: form.get("set"), rounds: Number(form.get("rounds")) }),
+        body: JSON.stringify({ set: form.get("set"), rounds }),
       });
       store.set(game.game_id);
       showRound();

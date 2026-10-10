@@ -63,7 +63,8 @@ Zmiana modeli → nowa migracja: `flask --app app db migrate -m "opis"`, przejrz
 ## Konta i rankingi
 
 - grać można bez konta; konto (nick + hasło) zapisuje wyniki: `/rejestracja`, `/logowanie`
-- do rankingu trafiają tylko pełne gry zalogowanych graczy (`ROUNDS_PER_GAME` rund albo cały zestaw, jeśli jest krótszy)
+- liczbę rund wybiera się przed grą: 5, 10, 20 albo własna (od 1 do liczby pytań w zestawie, najwyżej `MAX_ROUNDS`, domyślnie 200)
+- do rankingu trafiają tylko pełne gry zalogowanych graczy (`ROUNDS_PER_GAME` rund albo cały zestaw, jeśli jest krótszy); przy innej liczbie rund gra podpowiada, że wynik nie trafi do rankingu
 - `/ranking/<zestaw>`: najlepsza gra każdego gracza, wszech czasów i w bieżącym tygodniu (od poniedziałku, czas polski)
 - `/gracz/<nick>`: profil: historia gier, średnia na rundę, rekordy i miejsca w zestawach
 - na serwerze ustaw własny `SECRET_KEY` w `.env` (podpisuje ciasteczko sesji)
@@ -100,35 +101,43 @@ Przejście ze starego obrazu `postgres:16-alpine` na PostGIS zachowuje dane (ten
 - przykładowo: 250 km ≈ 3660, 500 km ≈ 2620, 1000 km ≈ 1340, 2000 km ≈ 350 pkt
 
 
-## Deployment na Heroku
+## Deployment na Azure
 
-Projekt ma `Procfile` (gunicorn + migracje w fazie release) i `.python-version`. Zdjęcia wgrywane w panelu są trzymane w bazie (tabela `stored_images`, serwowane z `/media/<nazwa>`), bo dysk dyna Heroku jest kasowany przy każdym restarcie.
-
-```bash
-heroku create nazwa-aplikacji
-```
+Aplikacja działa na **Azure App Service** (Linux, Python 3.11), a baza na **Azure Database for PostgreSQL – Flexible Server** z PostGIS. Wszystko zakłada i wdraża skrypt `deploy/azure.ps1`. Potrzebne jest Azure CLI (`winget install Microsoft.AzureCLI`) i zalogowanie:
 
 ```bash
-heroku addons:create heroku-postgresql:essential-0
+az login
 ```
+
+Pierwsze wdrożenie (nazwa musi być unikalna, będzie adresem `https://<nazwa>.azurewebsites.net`):
 
 ```bash
-heroku config:set SECRET_KEY=wygeneruj-dlugi-losowy-ciag ADMIN_PASSWORD=haslo-do-panelu
+powershell -ExecutionPolicy Bypass -File deploy/azure.ps1 -Name cultureguessr-best
 ```
+
+Kolejne wdrożenia, tylko kod:
 
 ```bash
-git push heroku feature/cultureguessr-app:main
+powershell -ExecutionPolicy Bypass -File deploy/azure.ps1 -Name cultureguessr-best -CodeOnly
 ```
+
+Co robi skrypt:
+
+- zakłada grupę zasobów, serwer PostgreSQL 16 (Burstable B1ms) z włączonym rozszerzeniem PostGIS (`azure.extensions=POSTGIS`) i App Service (plan B1); region domyślnie `polandcentral`, inny podasz przez `-Location westeurope`
+- losuje hasło do bazy, `SECRET_KEY` i `ADMIN_PASSWORD` (to ostatnie wypisuje na końcu, zapisz je) i ustawia je w ustawieniach aplikacji
+- wdraża **ostatni commit** (`git archive HEAD`), niezacommitowane zmiany nie trafią na serwer; zależności instaluje Azure (Oryx) z `requirements.txt`
+
+Przy każdym starcie `startup.sh` uruchamia migracje (`flask db upgrade`, w tym `CREATE EXTENSION postgis`), potem gunicorn. Dopóki `SEED_ON_START=1`, przy starcie wykonuje się też `flask seed` (dodaje tylko brakujące pytania). Gdy zaczniesz usuwać pytania w panelu, wyłącz to, bo seed dodałby je z powrotem:
 
 ```bash
-heroku run flask --app app seed
+az webapp config appsettings set --resource-group cultureguessr-best-rg --name cultureguessr-best --settings SEED_ON_START=0
 ```
 
-- migracje (`flask db upgrade`, w tym `CREATE EXTENSION postgis`) uruchamia faza `release` przy każdym deployu; Heroku Postgres obsługuje PostGIS
-- `DATABASE_URL` z Heroku (`postgres://...`) jest poprawiany automatycznie, połączenie idzie przez SSL
-- bez własnego `SECRET_KEY` aplikacja na Heroku nie wystartuje; na produkcji ustaw też `ADMIN_PASSWORD`
-- zdjęcia wgrane lokalnie przed tą zmianą przenosi do bazy `flask --app app import-uploads`
-- gunicorn nie działa na Windowsie; lokalnie dalej używaj `flask run`
+- Zdjęcia wgrywane w panelu są trzymane w bazie (tabela `stored_images`, serwowane z `/media/<nazwa>`), więc przetrwają restart i ponowne wdrożenie.
+- Na Azure (`WEBSITE_SITE_NAME` w środowisku) połączenie z bazą idzie przez SSL, ciasteczko sesji jest `Secure`, a aplikacja bez własnego `SECRET_KEY` nie wystartuje.
+- Logi na żywo: `az webapp log tail --resource-group cultureguessr-best-rg --name cultureguessr-best`.
+- Zdjęcia wgrane lokalnie przed przeniesieniem do bazy przenosi `flask --app app import-uploads`.
+- gunicorn nie działa na Windowsie; lokalnie dalej używaj `flask run`.
 
 ## Instalacja na telefonie (PWA)
 

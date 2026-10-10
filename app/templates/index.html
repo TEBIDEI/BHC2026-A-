@@ -34,10 +34,18 @@
         <p class="chosen">Wybrany zestaw: <b id="chosen-name"></b></p>
         <fieldset>
           <legend>Liczba rund</legend>
-          <div class="chips">
+          <div class="chips rounds-chips">
             <label class="chip"><input type="radio" name="rounds" value="5"><span>5</span></label>
             <label class="chip"><input type="radio" name="rounds" value="10" checked><span>10</span></label>
+            <label class="chip"><input type="radio" name="rounds" value="20"><span>20</span></label>
+            <label class="chip"><input type="radio" name="rounds" value="custom"><span>własna</span></label>
+            <span class="stepper" id="custom-rounds" hidden>
+              <button type="button" data-step="-1" aria-label="Mniej rund">−</button>
+              <input type="number" id="rounds-custom" min="1" max="50" value="15" inputmode="numeric" aria-label="Własna liczba rund">
+              <button type="button" data-step="1" aria-label="Więcej rund">+</button>
+            </span>
           </div>
+          <p class="hand rounds-hint" id="rounds-hint" hidden></p>
         </fieldset>
 
         <button class="btn btn-primary" type="submit" id="start-btn">Ruszaj w drogę</button>

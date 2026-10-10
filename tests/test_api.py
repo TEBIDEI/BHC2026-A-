@@ -70,6 +70,13 @@ def test_double_submit_rejected(client):
     assert client.post(url, json={"lat": 50, "lng": 20, "round": 1}).status_code == 409
 
 
+def test_custom_round_count(client):
+    assert client.get("/api/sets").get_json()["max_rounds"] == 200
+    assert client.post("/api/games", json={"set": "smaki", "rounds": 2}).get_json()["rounds"] == 2
+    assert client.post("/api/games", json={"set": "smaki", "rounds": 999}).get_json()["rounds"] == 3
+    assert client.post("/api/games", json={"rounds": "dużo"}).status_code == 400
+
+
 def test_unknown_set(client):
     assert client.post("/api/games", json={"set": "nie-ma"}).status_code == 404
 

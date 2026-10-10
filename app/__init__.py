@@ -6,16 +6,16 @@ from flask import Flask, abort, render_template, send_from_directory
 from flask_migrate import Migrate, upgrade
 from werkzeug.middleware.proxy_fix import ProxyFix
 
-from .config import ON_HEROKU, Config
+from .config import ON_AZURE, Config
 from .models import Question, QuestionSet, StoredImage, db
 
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
-    if ON_HEROKU:
+    if ON_AZURE:
         if app.config["SECRET_KEY"] == "dev-secret":
-            raise RuntimeError("Ustaw SECRET_KEY: heroku config:set SECRET_KEY=$(python -c 'import secrets; print(secrets.token_hex(32))')")
+            raise RuntimeError("Ustaw SECRET_KEY w ustawieniach aplikacji: az webapp config appsettings set --settings SECRET_KEY=...")
         app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1)
     db.init_app(app)
     Migrate(app, db, directory=str(Path(__file__).resolve().parent.parent / "migrations"))

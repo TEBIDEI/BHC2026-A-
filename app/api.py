@@ -91,7 +91,8 @@ def sets():
         "cover": None,
     })
     return jsonify({"sets": items, "logged_in": g.user is not None,
-                    "ranked_rounds": current_app.config["ROUNDS_PER_GAME"]})
+                    "ranked_rounds": current_app.config["ROUNDS_PER_GAME"],
+                    "max_rounds": current_app.config["MAX_ROUNDS"]})
 
 
 @bp.post("/games")
@@ -99,7 +100,7 @@ def create_game():
     data = request.get_json(silent=True) or {}
     full = current_app.config["ROUNDS_PER_GAME"]
     try:
-        rounds = max(1, min(int(data.get("rounds") or full), 50))
+        rounds = max(1, min(int(data.get("rounds") or full), current_app.config["MAX_ROUNDS"]))
     except (TypeError, ValueError):
         return error("Nieprawidłowa liczba rund.")
 
