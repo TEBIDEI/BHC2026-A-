@@ -1,0 +1,254 @@
+<!doctype html>
+<html lang="pl">
+<head>
+<meta charset="utf-8">
+<title>CultureGuessr OnePager</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Caveat:wght@500;700&family=EB+Garamond:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Special+Elite&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --paper: #F4ECD8;
+    --card: #FAF5E9;
+    --ink: #3E2C1C;
+    --primary: #704214;
+    --accent: #D08C60;
+    --line: #9A8467;
+    --muted: #7A654C;
+    --stamp: #A3402E;
+  }
+  @page { size: A4; margin: 0; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--paper); }
+  body {
+    width: 210mm; height: 297mm; overflow: hidden; position: relative;
+    font-family: "EB Garamond", Georgia, serif; color: var(--ink);
+    font-size: 8.9pt; line-height: 1.27;
+    background:
+      repeating-linear-gradient(to bottom, transparent 0, transparent 6.4mm, rgba(154,132,103,.16) 6.4mm, rgba(154,132,103,.16) 6.55mm),
+      var(--paper);
+    padding: 8mm 11mm 0 11mm;
+    -webkit-print-color-adjust: exact; print-color-adjust: exact;
+  }
+  section { margin-top: 3mm; }
+  h2 {
+    font-family: "Caveat", cursive; font-weight: 700; color: var(--primary);
+    font-size: 14pt; line-height: 1; margin-bottom: 1.1mm;
+  }
+  b { font-weight: 600; }
+  ul { list-style: none; }
+  li { position: relative; padding-left: 3.2mm; margin-bottom: .5mm; }
+  li::before { content: "×"; position: absolute; left: 0; top: -.2pt; color: var(--accent); font-weight: 700; }
+
+  /* header */
+  header { display: flex; justify-content: space-between; align-items: center; }
+  .kicker { font-family: "Caveat", cursive; font-size: 12.5pt; color: var(--primary); line-height: 1; }
+  h1 { font-size: 34pt; font-weight: 500; line-height: .95; letter-spacing: -.4pt; margin-top: .6mm; }
+  .tagline { font-size: 11.6pt; margin-top: 1.2mm; max-width: 140mm; line-height: 1.22; }
+  .stamp {
+    font-family: "Special Elite", monospace; color: var(--stamp);
+    border: 2pt solid var(--stamp); border-radius: 50%; flex: none;
+    width: 30mm; height: 30mm; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    transform: rotate(-9deg); text-align: center; margin-right: 3mm;
+    box-shadow: inset 0 0 0 1.2mm var(--paper), inset 0 0 0 1.6mm var(--stamp);
+  }
+  .stamp small { font-size: 6.2pt; letter-spacing: .5pt; }
+  .stamp b { font-size: 12pt; font-weight: 400; letter-spacing: .8pt; margin: .5mm 0; }
+
+  /* intro */
+  .intro { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5.5mm; }
+  .steps li { padding-left: 4.6mm; }
+  .steps li::before { content: attr(data-n); font-family: "Caveat", cursive; font-size: 12pt; top: -2pt; color: var(--primary); }
+
+  /* screenshots */
+  .shots { position: relative; height: 64mm; margin-top: 4.2mm; }
+  .print {
+    position: absolute; background: #fff; padding: 1.8mm; border: .4pt solid #d9ccb0;
+    box-shadow: 0 .6mm 1.4mm rgba(62,44,28,.18);
+  }
+  .print::before {
+    content: ""; position: absolute; width: 20mm; height: 5mm; left: 50%; top: -2.6mm; margin-left: -10mm;
+    background: rgba(208,140,96,.55); transform: rotate(-2deg);
+  }
+  .print img { display: block; width: 100%; }
+  .hero { left: 4mm; top: 1.5mm; width: 105mm; transform: rotate(-1.2deg); }
+  .phone {
+    position: absolute; right: 2mm; top: 0; width: 29mm; height: 62mm; border-radius: 4mm; overflow: hidden;
+    border: 1.6mm solid var(--ink); background: var(--ink); transform: rotate(2.2deg);
+    box-shadow: 0 .8mm 2mm rgba(62,44,28,.25);
+  }
+  .phone img { width: 100%; display: block; }
+  .note {
+    position: absolute; font-family: "Caveat", cursive; color: var(--primary); font-size: 12.5pt; line-height: 1.05;
+    left: 117mm; width: 37mm;
+  }
+  .note-a { top: 4mm; transform: rotate(-3deg); }
+  .note-b { top: 27mm; transform: rotate(2deg); }
+  .note-c { top: 44mm; transform: rotate(-2deg); }
+  .note::before { content: "← "; }
+  .note-c::before { content: ""; }
+  .note-c::after { content: "\00a0→"; }
+
+  /* numbers */
+  .numbers {
+    display: grid; grid-template-columns: repeat(5, 1fr);
+    border-top: 1pt solid var(--ink); border-bottom: 1pt solid var(--ink);
+  }
+  .numbers div { padding: 1.3mm 1.5mm 1.2mm; text-align: center; border-left: .5pt dashed var(--line); }
+  .numbers div:first-child { border-left: 0; }
+  .numbers b { display: block; font-size: 17pt; font-weight: 500; line-height: 1; color: var(--primary); }
+  .numbers span { font-size: 7.8pt; color: var(--muted); line-height: 1.12; display: block; margin-top: .5mm; }
+
+  /* criteria + competition */
+  .cols { display: grid; grid-template-columns: 1.1fr 1fr; gap: 6mm; }
+  .crit { display: grid; grid-template-columns: 23mm 1fr; column-gap: 2mm; row-gap: 1.1mm; }
+  .crit dt { font-family: "Caveat", cursive; font-size: 11pt; color: var(--primary); line-height: 1.05; }
+  .usp {
+    margin-top: 1.6mm; background: var(--card); border: .6pt solid var(--line); padding: 1.5mm 2.4mm;
+    font-size: 9.2pt; line-height: 1.22;
+  }
+  .usp span { font-family: "Caveat", cursive; font-size: 12pt; color: var(--stamp); }
+
+  /* business */
+  .biz { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3mm; }
+  .card { background: var(--card); border: .6pt solid var(--line); padding: 2mm 2.5mm 1.8mm; }
+  .card h3 { font-family: "Caveat", cursive; font-weight: 700; font-size: 12.5pt; color: var(--primary); line-height: 1; margin-bottom: 1mm; }
+
+  /* bottom */
+  .bottom { display: grid; grid-template-columns: 1fr 1.3fr; gap: 6mm; }
+  .chips { display: flex; flex-wrap: wrap; gap: 1.2mm; }
+  .chips span { border: .6pt solid var(--ink); padding: .35mm 1.8mm; font-size: 8.2pt; background: var(--card); white-space: nowrap; }
+  .chips span.k { background: var(--ink); color: var(--paper); }
+  footer {
+    position: absolute; left: 11mm; right: 11mm; bottom: 4mm; display: flex; white-space: nowrap; gap: 4mm; justify-content: space-between; align-items: baseline;
+    font-size: 7.2pt; color: var(--muted); border-top: .5pt solid var(--line); padding-top: 1.2mm;
+  }
+  footer b { color: var(--ink); font-weight: 600; font-size: 8.6pt; }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <p class="kicker">BEST Hacks 2026 · Code For Culture</p>
+    <h1>Culture<i>Guessr</i></h1>
+    <p class="tagline">GeoGuessr dla tradycji. Widzisz strój, potrawę albo napis i&nbsp;zgadujesz na mapie Europy, skąd pochodzi. Po każdej rundzie dowiadujesz się, co to jest.</p>
+  </div>
+  <div class="stamp"><small>KATEGORIA</small><b>TRADYCJA</b><small>DZIEDZICTWO</small></div>
+</header>
+
+<section class="intro">
+  <div>
+    <h2>Problem</h2>
+    <p>Stroje, regionalne potrawy, gwary i&nbsp;rzemiosło przetrwały stulecia, ale młodzi znają je coraz słabiej. Część z&nbsp;nich UNESCO uznaje już za dziedzictwo <b>wymagające pilnej ochrony</b>. Muzea mają zbiory, tylko mało kto zagląda do nich sam z&nbsp;siebie.</p>
+  </div>
+  <div>
+    <h2>Rozwiązanie</h2>
+    <p>Gra, w&nbsp;której zamiast widoku ulicy widzisz <b>element kultury</b>. Najpierw zgadujesz, potem dostajesz kartę faktów: nazwę, region, okazję i&nbsp;materiały. Ciekawość pojawia się przed odpowiedzią, więc wiedza zostaje w&nbsp;pamięci.</p>
+  </div>
+  <div>
+    <h2>Jak się gra</h2>
+    <ul class="steps">
+      <li data-n="1.">Wybierz zestaw (stroje, smaki, języki, zabytki) i&nbsp;liczbę rund.</li>
+      <li data-n="2.">Obejrzyj zdjęcie i&nbsp;postaw krzyżyk na mapie.</li>
+      <li data-n="3.">Zobacz obszar, odległość, punkty (do 5000) i&nbsp;kartę faktów.</li>
+      <li data-n="4.">Zaloguj się i&nbsp;walcz w&nbsp;tygodniowym rankingu.</li>
+    </ul>
+  </div>
+</section>
+
+<section class="shots">
+  <figure class="print hero"><img src="img/hero.jpg" alt="Wynik rundy: strój bułgarski, obszar Bułgarii na mapie i karta faktów"></figure>
+  <p class="note note-a">trafienie w&nbsp;obszar = 5000&nbsp;pkt, poza nim liczy się odległość do granicy</p>
+  <p class="note note-b">karta faktów po każdej rundzie</p>
+  <p class="note note-c">działa na telefonie, instaluje się jak&nbsp;aplikacja</p>
+  <div class="phone"><img src="img/phone.jpg" alt="Wersja mobilna: xhubleta, Albania"></div>
+</section>
+
+<section class="numbers">
+  <div><b>200</b><span>pytań z&nbsp;opisem i&nbsp;kartą faktów</span></div>
+  <div><b>4</b><span>zestawy tematyczne po 50 pytań</span></div>
+  <div><b>40+</b><span>krajów i&nbsp;regionów Europy</span></div>
+  <div><b>4</b><span>poziomy odpowiedzi: od miasta do państwa</span></div>
+  <div><b>29</b><span>testów automatycznych, wszystkie zielone</span></div>
+</section>
+
+<section class="cols">
+  <div>
+    <h2>Jak spełniamy kryteria</h2>
+    <dl class="crit">
+      <dt>Realizacja</dt>
+      <dd>Działająca aplikacja, nie makieta: gra, konta, rankingi, profil gracza, panel do dodawania pytań i&nbsp;zestawów, wdrożenie na Azure.</dd>
+      <dt>Technika</dt>
+      <dd>Odpowiedź to <b>obszar w&nbsp;PostGIS</b>, a&nbsp;odległość do granicy liczymy na elipsoidzie. Stan gry trzymamy na serwerze, więc odpowiedzi nie da się podejrzeć.</dd>
+      <dt>Design i&nbsp;UX</dt>
+      <dd>Styl notatnika podróżnika, mobile-first, przybliżanie zdjęć do 800%, podsumowanie podróży na mapie.</dd>
+      <dt>Innowacyjność</dt>
+      <dd>Zgadujemy kulturę, nie krajobraz. Tradycja może obejmować kilka regionów, np. Sápmi to 4&nbsp;regiony w&nbsp;3&nbsp;krajach.</dd>
+    </dl>
+  </div>
+  <div>
+    <h2>Konkurencja</h2>
+    <ul>
+      <li><b>GeoGuessr</b>: ponad 80 mln graczy, ale uczy rozpoznawać drogi i&nbsp;krajobraz, nie kulturę. Pełna wersja jest płatna.</li>
+      <li><b>Google Arts &amp; Culture</b>: ogromne zbiory, ale głównie do oglądania, bez rywalizacji.</li>
+      <li><b>Seterra i&nbsp;quizy</b>: flagi i&nbsp;stolice, bez kontekstu kulturowego.</li>
+      <li><b>Duolingo</b>: 133 mln aktywnych miesięcznie dowodzi, że grywalizacja działa, ale uczy tylko języków.</li>
+    </ul>
+    <p class="usp"><span>Nasza przewaga:</span>&nbsp; emocje GeoGuessra i&nbsp;treść muzeum etnograficznego. Każda instytucja dodaje własny zestaw w&nbsp;panelu, bez programisty.</p>
+  </div>
+</section>
+
+<section class="biz">
+  <div class="card">
+    <h3>Dla kogo</h3>
+    <ul>
+      <li>gracze geo-gier i&nbsp;quizów, 15–35 lat</li>
+      <li>nauczyciele geografii, historii i&nbsp;WOS</li>
+      <li>muzea, ośrodki kultury, regionalna turystyka</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Skąd wiemy, że to potrzebne</h3>
+    <ul>
+      <li>format sprawdzony: GeoGuessr ma ponad 80 mln graczy</li>
+      <li>grywalizacja utrzymuje uczących się (Duolingo)</li>
+      <li>instytucje mają treści, ale brakuje im sposobu na młodych</li>
+    </ul>
+  </div>
+  <div class="card">
+    <h3>Model biznesowy</h3>
+    <ul>
+      <li>darmowa gra, bez instalacji</li>
+      <li>płatne zestawy dla muzeów i&nbsp;regionów, z&nbsp;QR przy ekspozycji</li>
+      <li>licencja szkolna i&nbsp;zestawy sponsorowane</li>
+    </ul>
+  </div>
+</section>
+
+<section class="bottom">
+  <div>
+    <h2>Technologie</h2>
+    <div class="chips">
+      <span class="k">Python · Flask</span><span class="k">PostgreSQL + PostGIS</span>
+      <span>SQLAlchemy · Alembic</span><span>Leaflet · OpenStreetMap</span>
+      <span>Wikimedia Commons</span><span>PWA</span><span>Microsoft Azure</span><span>pytest</span>
+    </div>
+  </div>
+  <div>
+    <h2>Co dalej</h2>
+    <ul>
+      <li>gra wieloosobowa na żywo i&nbsp;wyzwania dla klas</li>
+      <li>zestawy z&nbsp;Krajowej listy niematerialnego dziedzictwa: Kaszuby, Śląsk, Podhale</li>
+      <li>import zbiorów z&nbsp;Europeany i&nbsp;NAC, AI do opisów i&nbsp;weryfikacji zdjęć</li>
+    </ul>
+  </div>
+</section>
+
+<footer>
+  <b>github.com/TEBIDEI/BHC2026-A-</b>
+  <span>Zdjęcia: Wikimedia Commons (wolne licencje) · mapy © OpenStreetMap</span>
+  <span>Dane: GeoGuessr AB · Duolingo, 10-K 2025</span>
+</footer>
+
+</body>
+</html>

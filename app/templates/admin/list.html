@@ -1,0 +1,67 @@
+{% extends "admin/_layout.html" %}
+{% block title %}Pytania - {{ app_name }}{% endblock %}
+{% block admin %}
+<div class="admin-head">
+  <h1>Pytania <span class="muted small">({{ questions|length }}{% if questions|length != total %} z {{ total }}{% endif %})</span></h1>
+  <a class="btn btn-primary" href="{{ url_for('admin.new', category=category or None, set=set_slug or None) }}">+ Dodaj pytanie</a>
+</div>
+
+<form class="filters" method="get">
+  <input type="search" name="q" value="{{ search }}" placeholder="Szukaj po tytule lub miejscu…">
+  <select name="set" onchange="this.form.submit()">
+    <option value="">Wszystkie zestawy</option>
+    {% for s in sets %}
+      <option value="{{ s.slug }}" {% if s.slug == set_slug %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
+  <select name="category" onchange="this.form.submit()">
+    <option value="">Wszystkie kategorie</option>
+    {% for key, label in categories.items() %}
+      <option value="{{ key }}" {% if key == category %}selected{% endif %}>{{ label }}</option>
+    {% endfor %}
+  </select>
+  <button class="btn" type="submit">Filtruj</button>
+</form>
+
+{% if questions %}
+  <div class="overview-map" id="overview-map"></div>
+  <div class="q-grid">
+    {% for q in questions %}
+      <article class="card q-card {% if not q.active %}inactive{% endif %}" id="q-{{ q.id }}">
+        <a href="{{ url_for('admin.edit', question_id=q.id) }}"><img src="{{ q.image_src }}" alt="" loading="lazy"></a>
+        <div class="body">
+          <h3>{{ q.title }}</h3>
+          <div class="meta">{{ q.location_name }}</div>
+          <div class="meta">
+            <span class="badge">{{ q.category_label }}</span>
+            <span class="badge" title="Poziom odpowiedzi">{{ q.level_label if q.area is not none else 'punkt' }}</span>
+            {% for s in q.sets %}<span class="badge badge-set">{{ s.name }}</span>{% endfor %}
+            {% if not q.active %}<span class="badge badge-off">wyłączone</span>{% endif %}
+            <span class="small">{{ '%.3f'|format(q.lat) }}, {{ '%.3f'|format(q.lng) }}</span>
+          </div>
+        </div>
+        <div class="actions">
+          <a class="btn btn-sm" href="{{ url_for('admin.edit', question_id=q.id) }}">Edytuj</a>
+          <form method="post" action="{{ url_for('admin.toggle', question_id=q.id) }}">
+            <button class="btn btn-sm" type="submit">{{ 'Wyłącz' if q.active else 'Włącz' }}</button>
+          </form>
+          <form method="post" action="{{ url_for('admin.delete', question_id=q.id) }}" onsubmit="return confirm('Usunąć „{{ q.title|e }}”?')">
+            <button class="btn btn-sm btn-danger" type="submit">Usuń</button>
+          </form>
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <div class="card empty">
+    <p>Brak pytań{% if search or category %} dla tego filtra{% endif %}.</p>
+    <a class="btn btn-primary" href="{{ url_for('admin.new') }}">Dodaj pierwsze</a>
+    <p class="muted small">albo załaduj przykładowe: <span class="kbd">flask --app app seed</span></p>
+  </div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>window.ADMIN_POINTS = {{ points | tojson }};</script>
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

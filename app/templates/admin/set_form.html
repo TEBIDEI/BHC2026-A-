@@ -1,0 +1,74 @@
+{% extends "admin/_layout.html" %}
+{% block title %}{{ 'Edytuj zestaw' if qs.id else 'Nowy zestaw' }} - {{ app_name }}{% endblock %}
+{% block admin %}
+<div class="admin-head">
+  <h1>{{ 'Zestaw: ' ~ qs.name if qs.id else 'Nowy zestaw' }}</h1>
+</div>
+
+<form method="post">
+  <div class="edit-grid">
+    <div class="card">
+      <div class="field">
+        <label for="name">Nazwa</label>
+        <input type="text" id="name" name="name" value="{{ qs.name or '' }}" placeholder="np. Smaki Bałkanów" required>
+      </div>
+      <div class="field">
+        <label for="slug">Adres (slug)</label>
+        <input type="text" id="slug" name="slug" value="{{ qs.slug or '' }}" placeholder="powstanie z nazwy, np. smaki-balkanow">
+        <p class="hint">Używany w linkach do rankingu: /ranking/<b>{{ qs.slug or 'adres' }}</b></p>
+      </div>
+      <div class="field">
+        <label for="description">Opis (jedno zdanie na ekranie startowym)</label>
+        <textarea id="description" name="description">{{ qs.description or '' }}</textarea>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="position">Kolejność</label>
+          <input type="number" id="position" name="position" value="{{ qs.position or 0 }}">
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <label class="check"><input type="checkbox" name="active" {% if qs.active %}checked{% endif %}> Widoczny w grze</label>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <label for="q-filter">Pytania w zestawie <span class="muted small" id="q-count"></span></label>
+      <input type="search" id="q-filter" placeholder="Filtruj po tytule lub miejscu…">
+      <div class="pick-list" id="pick-list">
+        {% for q in questions %}
+          <label class="pick" data-text="{{ (q.title ~ ' ' ~ q.location_name ~ ' ' ~ q.category_label)|lower }}">
+            <input type="checkbox" name="questions" value="{{ q.id }}" {% if q.id in selected %}checked{% endif %}>
+            <img src="{{ q.image_src }}" alt="" loading="lazy">
+            <span><b>{{ q.title }}</b><small>{{ q.location_name }} · {{ q.category_label }}{% if not q.active %} · wyłączone{% endif %}</small></span>
+          </label>
+        {% endfor %}
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit">Zapisz zestaw</button>
+    <a class="btn" href="{{ url_for('admin.sets_index') }}">Anuluj</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  (() => {
+    const filter = document.getElementById("q-filter");
+    const items = [...document.querySelectorAll("#pick-list .pick")];
+    const count = document.getElementById("q-count");
+    const update = () => {
+      count.textContent = `(zaznaczone: ${items.filter((i) => i.querySelector("input").checked).length})`;
+    };
+    filter.addEventListener("input", () => {
+      const q = filter.value.trim().toLowerCase();
+      for (const item of items) item.hidden = Boolean(q) && !item.dataset.text.includes(q);
+    });
+    document.getElementById("pick-list").addEventListener("change", update);
+    update();
+  })();
+</script>
+{% endblock %}

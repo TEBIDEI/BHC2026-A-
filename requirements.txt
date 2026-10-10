@@ -1,0 +1,10 @@
+Flask>=3.0
+Flask-SQLAlchemy>=3.1
+psycopg2-binary>=2.9.9
+python-dotenv>=1.0
+Pillow>=10.0
+pytest>=8.0
+Flask-Migrate>=4.0
+tzdata>=2024.1
+GeoAlchemy2>=0.15
+gunicorn>=22.0

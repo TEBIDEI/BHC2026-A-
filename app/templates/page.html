@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="/">{{ app_name }}</a>
+  {% include "_usernav.html" %}
+</header>
+<main class="sheet-page">
+  {% block page %}{% endblock %}
+</main>
+{% endblock %}

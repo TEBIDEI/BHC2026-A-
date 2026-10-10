@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}{{ 'Zaloguj się' if mode == 'login' else 'Załóż konto' }} - {{ app_name }}{% endblock %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="/">{{ app_name }}</a>
+  {% include "_usernav.html" %}
+</header>
+
+<main class="auth">
+  <figure class="atlas map-art" aria-hidden="true">
+    <svg class="atlas-map" viewBox="0 0 800 640" preserveAspectRatio="xMidYMid meet">
+      {% include "_map_icons.html" %}
+      <rect class="sea" width="800" height="640"/>
+      {% include "_europe_map.html" %}
+      <g class="compass" transform="translate(735 70)">
+        <circle r="26"/><path d="M0-38 4 0 0 38-4 0ZM-38 0 0 4 38 0 0-4Z"/><text y="-44" text-anchor="middle">N</text>
+      </g>
+    </svg>
+    <figcaption class="hand">Europa, mapa podróży</figcaption>
+  </figure>
+
+  <section class="auth-form">
+    <p class="hand kicker">{{ 'witaj z powrotem' if mode == 'login' else 'nowy podróżnik' }}</p>
+    <h1>{{ 'Zaloguj się' if mode == 'login' else 'Załóż konto' }}</h1>
+    <p class="muted">Konto zapisuje Twoje wyniki w rankingach. Bez niego też zagrasz, tylko wyniki nigdzie nie trafią.</p>
+
+    <form method="post" novalidate>
+      <input type="hidden" name="next" value="{{ next }}">
+      <div class="field">
+        <label for="username">Nick</label>
+        <input type="text" id="username" name="username" value="{{ username }}" autocomplete="username"
+               autocapitalize="none" spellcheck="false" maxlength="20" required {% if not username %}autofocus{% endif %}>
+        {% if mode == 'register' %}<p class="hint">3-20 znaków: litery, cyfry, kropka, myślnik, podkreślnik.</p>{% endif %}
+      </div>
+      <div class="field">
+        <label for="password">Hasło</label>
+        <input type="password" id="password" name="password" required
+               autocomplete="{{ 'current-password' if mode == 'login' else 'new-password' }}" {% if username %}autofocus{% endif %}>
+      </div>
+      {% if mode == 'register' %}
+        <div class="field">
+          <label for="password2">Powtórz hasło</label>
+          <input type="password" id="password2" name="password2" autocomplete="new-password" required>
+        </div>
+      {% endif %}
+      {% if error %}<p class="form-error" role="alert">{{ error }}</p>{% endif %}
+      <button class="btn btn-primary btn-block" type="submit">{{ 'Zaloguj się' if mode == 'login' else 'Załóż konto' }}</button>
+    </form>
+
+    <p class="switch">
+      {% if mode == 'login' %}
+        Nie masz konta? <a href="{{ url_for('auth.register', next=next or None) }}">Załóż je</a>
+      {% else %}
+        Masz już konto? <a href="{{ url_for('auth.login', next=next or None) }}">Zaloguj się</a>
+      {% endif %}
+    </p>
+    <p><a class="guest" href="/">Zagraj bez logowania →</a></p>
+  </section>
+</main>
+{% endblock %}

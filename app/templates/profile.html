@@ -1,0 +1,56 @@
+{% extends "page.html" %}
+{% block title %}{{ player.username }} - {{ app_name }}{% endblock %}
+{% block page %}
+<p class="hand kicker">notatnik gracza</p>
+<h1>{{ player.username }}</h1>
+<p class="muted">W grze od {{ player.created_at | data(godzina=False) }}.</p>
+
+<p class="statline">
+  <span><b>{{ stats.games | gier }}</b></span>
+  <span><b>{{ stats.avg_round | pkt }}</b> pkt średnio na rundę</span>
+  <span><b>{{ stats.best | pkt }}</b> pkt w najlepszej grze</span>
+</p>
+
+<h2>Rekordy w zestawach</h2>
+{% if bests %}
+  <table class="ledger">
+    <thead><tr><th>Zestaw</th><th class="num">Najlepszy wynik</th><th class="num">Miejsce</th></tr></thead>
+    <tbody>
+      {% for b in bests %}
+        <tr>
+          <td>{{ b.name }}</td>
+          <td class="num">{{ b.best | pkt }}</td>
+          <td class="num"><a href="{{ url_for('ranking.board', slug=b.slug) }}">#{{ b.position }}</a></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="muted">Jeszcze żadnej gry w rankingu. Rozegraj pełną grę w dowolnym zestawie.</p>
+{% endif %}
+
+<h2>Ostatnie gry</h2>
+{% if games %}
+  <table class="ledger">
+    <thead><tr><th>Kiedy</th><th>Zestaw</th><th class="num">Wynik</th></tr></thead>
+    <tbody>
+      {% for game in games %}
+        <tr>
+          <td>{{ game.finished_at | data }}</td>
+          <td>{{ game.question_set.name if game.question_set else 'Wszystkie pytania' }}{% if not game.ranked %} <span class="muted small">(poza rankingiem)</span>{% endif %}</td>
+          <td class="num">{{ game.total_score | pkt }} <span class="muted small">/ {{ (game.rounds * config.MAX_ROUND_SCORE) | pkt }}</span></td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+{% else %}
+  <p class="muted">Brak ukończonych gier.</p>
+{% endif %}
+
+{% if current_user and current_user.id == player.id %}
+  <form method="post" action="{{ url_for('auth.logout') }}" class="actions">
+    <a class="btn btn-primary" href="/">Zagraj</a>
+    <button class="btn" type="submit">Wyloguj się</button>
+  </form>
+{% endif %}
+{% endblock %}

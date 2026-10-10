@@ -1,0 +1,35 @@
+{% extends "admin/_layout.html" %}
+{% block title %}Zestawy - {{ app_name }}{% endblock %}
+{% block admin %}
+<div class="admin-head">
+  <h1>Zestawy <span class="muted small">({{ sets|length }})</span></h1>
+  <a class="btn btn-primary" href="{{ url_for('admin.set_new') }}">+ Nowy zestaw</a>
+</div>
+
+{% if sets %}
+  <table class="ledger">
+    <thead><tr><th>Kolejność</th><th>Zestaw</th><th class="num">Pytania</th><th></th></tr></thead>
+    <tbody>
+      {% for s in sets %}
+        <tr>
+          <td>{{ s.position }}</td>
+          <td>
+            <b>{{ s.name }}</b> {% if not s.active %}<span class="badge badge-off">ukryty</span>{% endif %}<br>
+            <span class="muted small">/{{ s.slug }}: {{ s.description or 'bez opisu' }}</span>
+          </td>
+          <td class="num"><a href="{{ url_for('admin.index', set=s.slug) }}">{{ s.active_questions|length }} / {{ s.questions|length }}</a></td>
+          <td class="num">
+            <a class="btn btn-sm" href="{{ url_for('admin.set_edit', set_id=s.id) }}">Edytuj</a>
+            <form method="post" action="{{ url_for('admin.set_delete', set_id=s.id) }}" style="display:inline" onsubmit="return confirm('Usunąć zestaw „{{ s.name|e }}”? Pytania zostaną.')">
+              <button class="btn btn-sm btn-danger" type="submit">Usuń</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+  <p class="muted small">Liczba pytań: aktywne / wszystkie. Gra używa tylko aktywnych.</p>
+{% else %}
+  <div class="card empty"><p>Brak zestawów.</p><a class="btn btn-primary" href="{{ url_for('admin.set_new') }}">Utwórz pierwszy</a></div>
+{% endif %}
+{% endblock %}

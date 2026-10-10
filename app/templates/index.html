@@ -1,0 +1,126 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="/">{{ app_name }}</a>
+  <div class="stats" id="stats" hidden>
+    <span>runda <b id="stat-round">1 z 10</b></span>
+    <span><b id="stat-score">0</b> pkt</span>
+    <button class="exit-btn" type="button" id="exit-btn" aria-label="Wyjdź z gry do menu">Wyjdź</button>
+  </div>
+  {% include "_usernav.html" %}
+</header>
+
+<main>
+  <section class="start" id="screen-start">
+    <div class="start-bg map-art" aria-hidden="true">
+      <svg viewBox="0 0 800 640" preserveAspectRatio="xMidYMid slice">
+        {% include "_map_icons.html" %}
+        {% include "_europe_map.html" %}
+      </svg>
+    </div>
+    <form class="page" id="start-form">
+      <p class="hand start-kicker">notatnik podróżnika po Europie</p>
+      <h1>Skąd to pochodzi?</h1>
+      <p class="lead">Potrawy, stroje, napisy i zwyczaje. Obejrzyj zdjęcie, postaw krzyżyk na mapie. Im bliżej trafisz, tym więcej punktów, do 5000 za rundę.</p>
+
+      <fieldset>
+        <legend>Wybierz zestaw</legend>
+        <div class="rail-wrap">
+          <div class="set-rail" id="set-list"><p class="muted">Wczytuję zestawy…</p></div>
+        </div>
+      </fieldset>
+
+      <div class="start-options" id="start-options" hidden>
+        <p class="chosen">Wybrany zestaw: <b id="chosen-name"></b></p>
+        <fieldset>
+          <legend>Liczba rund</legend>
+          <div class="chips rounds-chips">
+            <label class="chip"><input type="radio" name="rounds" value="5"><span>5</span></label>
+            <label class="chip"><input type="radio" name="rounds" value="10" checked><span>10</span></label>
+            <label class="chip"><input type="radio" name="rounds" value="20"><span>20</span></label>
+            <label class="chip"><input type="radio" name="rounds" value="custom"><span>własna</span></label>
+            <span class="stepper" id="custom-rounds" hidden>
+              <button type="button" data-step="-1" aria-label="Mniej rund">−</button>
+              <input type="number" id="rounds-custom" min="1" max="50" value="15" inputmode="numeric" aria-label="Własna liczba rund">
+              <button type="button" data-step="1" aria-label="Więcej rund">+</button>
+            </span>
+          </div>
+          <p class="hand rounds-hint" id="rounds-hint" hidden></p>
+        </fieldset>
+
+        <button class="btn btn-primary" type="submit" id="start-btn">Ruszaj w drogę</button>
+        {% if current_user %}
+          <p class="note">Grasz jako <b>{{ current_user.username }}</b>. Gra na {{ config.ROUNDS_PER_GAME }} rund trafia do rankingu zestawu.</p>
+        {% else %}
+          <p class="note">Grasz jako gość. <a href="{{ url_for('auth.login') }}">Zaloguj się</a>, żeby trafić do rankingu.</p>
+        {% endif %}
+      </div>
+      <p class="form-error" id="start-error" hidden></p>
+    </form>
+  </section>
+
+  <section class="play" id="screen-play" hidden>
+    <div class="photo" id="photo" title="Kliknij, aby powiększyć">
+      <figure class="print" id="print">
+        <img id="photo-img" alt="Zdjęcie do odgadnięcia" class="loading">
+        <figcaption>
+          <span class="hand" id="photo-tag"></span>
+          <span class="credit" id="photo-credit" hidden></span>
+        </figcaption>
+      </figure>
+    </div>
+    <div class="map-wrap">
+      <div id="map" aria-label="Mapa Europy, kliknij, aby zgadnąć"></div>
+      <div class="guess-bar" id="guess-bar">
+        <button class="btn btn-primary" id="guess-btn" disabled>Kliknij na mapie</button>
+      </div>
+      <div class="result sheet" id="result" hidden>
+        <div class="stamp" id="result-stamp" aria-live="polite"><b id="result-points">0</b><span>punktów</span></div>
+        <p class="hand result-distance" id="result-distance"></p>
+        <h3 id="result-title"></h3>
+        <div class="where" id="result-where"></div>
+        <p class="result-desc" id="result-desc"></p>
+        <dl class="facts" id="result-facts" hidden></dl>
+        <button class="btn btn-primary btn-block" id="next-btn">Następna runda</button>
+      </div>
+    </div>
+  </section>
+
+    <section class="summary" id="screen-summary" hidden>
+    <div class="summary-map-wrap"><div id="summary-map"></div></div>
+    <div class="summary-body">
+      <div class="summary-head">
+        <div>
+          <p class="hand start-kicker">koniec podróży</p>
+          <h1>Twój wynik</h1>
+          <p class="muted">na <span id="summary-max">50 000</span> możliwych punktów</p>
+        </div>
+        <div class="stamp stamp-lg" id="summary-stamp"><b id="summary-total">0</b><span>punktów</span></div>
+      </div>
+      <p class="rank-note" id="rank-note" hidden></p>
+      <ol class="rounds" id="summary-rounds"></ol>
+      <div class="summary-actions">
+        <button class="btn btn-primary" id="again-btn">Zagraj ponownie</button>
+        <button class="btn" id="menu-btn">Inny zestaw</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="lightbox" id="lightbox" role="dialog" aria-modal="true" aria-label="Powiększone zdjęcie" hidden>
+  <div class="zoom-stage"><img alt="" draggable="false"></div>
+  <div class="zoom-bar">
+    <button type="button" data-zoom="out" aria-label="Oddal">-</button>
+    <span class="zoom-level">100%</span>
+    <button type="button" data-zoom="in" aria-label="Przybliż">+</button>
+    <button type="button" data-zoom="reset">Dopasuj</button>
+    <button type="button" data-zoom="close" aria-label="Zamknij">×</button>
+  </div>
+  <p class="zoom-hint">kółko myszy albo dwa palce: przybliżanie · przeciągnij: przesuwanie · dwuklik: zoom</p>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/zoom.js') }}"></script>
+<script src="{{ url_for('static', filename='js/game.js') }}"></script>
+{% endblock %}
