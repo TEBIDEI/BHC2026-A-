@@ -1,0 +1,8 @@
+<nav class="usernav" id="usernav">
+  <a href="{{ url_for('ranking.board') }}">Ranking</a>
+  {% if current_user %}
+    <a class="me" href="{{ url_for('ranking.profile', username=current_user.username) }}">{{ current_user.username }}</a>
+  {% else %}
+    <a href="{{ url_for('auth.login') }}">Zaloguj się</a>
+  {% endif %}
+</nav>

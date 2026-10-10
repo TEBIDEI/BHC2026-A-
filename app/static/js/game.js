@@ -10,6 +10,11 @@
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => Math.round(n).toLocaleString("pl-PL");
   const fmtKm = (km) => (km < 10 ? km.toFixed(1) : fmt(km)) + " km";
+  // Polska odmiana: 1 pytanie, 2 pytania, 5 pytań, 22 pytania.
+  const plural = (n, one, few, many) =>
+    n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
+  // Miniatury z Wikimedia Commons w mniejszej rozdzielczości.
+  const thumb = (url) => (url || "").replace(/([?&]width=)\d+/, "$1240");
 
   const store = {
     get() { try { return localStorage.getItem(STORAGE_KEY); } catch { return null; } },
@@ -37,7 +42,9 @@
   // ---------- Ekrany ----------
   function show(screen) {
     for (const id of ["screen-start", "screen-play", "screen-summary"]) $(id).hidden = id !== screen;
-    $("stats").hidden = screen === "screen-start";
+    // W trakcie gry pasek pokazuje rundę i punkty, poza nią — nawigację gracza.
+    $("stats").hidden = screen !== "screen-play";
+    $("usernav").hidden = screen === "screen-play";
   }
 
   // Znaczniki: krzyżyk gracza, kółko z kropką dla odpowiedzi, numer rundy w podsumowaniu.
@@ -71,20 +78,34 @@
   }
 
   // ---------- Start ----------
-  async function loadCategories() {
+  async function loadSets() {
+    const list = $("set-list");
     try {
-      const data = await api("/categories");
-      $("count-all").textContent = data.total;
-      const chips = $("category-chips");
-      for (const c of data.categories) {
-        if (!c.count) continue;
+      const data = await api("/sets");
+      const wanted = new URLSearchParams(location.search).get("zestaw");
+      const sets = data.sets.filter((s) => s.count);
+      list.innerHTML = "";
+      sets.forEach((s, i) => {
         const label = document.createElement("label");
-        label.className = "chip";
-        label.innerHTML = `<input type="radio" name="category" value="${c.key}"><span>${c.label} <small>${c.count}</small></span>`;
-        chips.appendChild(label);
-      }
-      if (!data.total) showStartError("Brak pytań w bazie — dodaj je w panelu /admin albo uruchom „flask seed”.");
+        label.className = "toc-item";
+        label.innerHTML = `
+          <input type="radio" name="set">
+          ${s.cover ? '<img alt="" loading="lazy">' : '<span class="blank"></span>'}
+          <span><b></b><small></small></span>
+          <span class="count"></span>`;
+        const input = label.querySelector("input");
+        input.value = s.slug;
+        input.checked = wanted ? s.slug === wanted : i === 0;
+        if (s.cover) label.querySelector("img").src = thumb(s.cover);
+        label.querySelector("b").textContent = s.name;
+        label.querySelector("small").textContent = s.description || "";
+        label.querySelector(".count").textContent = `${s.count} ${plural(s.count, "pytanie", "pytania", "pytań")}`;
+        list.appendChild(label);
+      });
+      if (!list.querySelector("input:checked") && sets.length) list.querySelector("input").checked = true;
+      if (!sets.length) showStartError("Brak pytań w bazie — dodaj je w panelu /admin albo uruchom „flask seed”.");
     } catch (e) {
+      list.innerHTML = "";
       showStartError("Nie udało się połączyć z serwerem.");
     }
   }
@@ -101,7 +122,7 @@
     try {
       game = await api("/games", {
         method: "POST",
-        body: JSON.stringify({ category: form.get("category"), rounds: Number(form.get("rounds")) }),
+        body: JSON.stringify({ set: form.get("set"), rounds: Number(form.get("rounds")) }),
       });
       store.set(game.game_id);
       showRound();
@@ -121,6 +142,7 @@
       layer = L.layerGroup().addTo(map);
       map.on("click", onMapClick);
     }
+    map.setMaxBounds(EUROPE.pad(0.15));
     map.invalidateSize();
     layer.clearLayers();
     map.fitBounds(EUROPE);
@@ -194,6 +216,7 @@
     $("result-where").textContent = a.location_name;
     $("result-desc").textContent = a.description || "";
     $("result-desc").hidden = !a.description;
+    renderFacts(a.facts || []);
     if (a.image_credit) {
       $("photo-credit").textContent = "fot. " + a.image_credit;
       $("photo-credit").hidden = false;
@@ -209,6 +232,19 @@
     $("next-btn").focus({ preventScroll: true });
   }
 
+  function renderFacts(facts) {
+    const dl = $("result-facts");
+    dl.innerHTML = "";
+    for (const f of facts) {
+      const dt = document.createElement("dt");
+      const dd = document.createElement("dd");
+      dt.textContent = f.label;
+      dd.textContent = f.value;
+      dl.append(dt, dd);
+    }
+    dl.hidden = !facts.length;
+  }
+
   // Odręczny dopisek pod pieczątką.
   function distanceNote(km, score, max) {
     if (score >= max) return "w samo sedno!";
@@ -221,6 +257,8 @@
     const card = $("result").getBoundingClientRect();
     const sideBySide = mapBox.width - card.width > 320;
     const extra = sideBySide ? [card.width + 32, 40] : [40, card.height + 32];
+    // Ograniczenie do Europy cofałoby widok pod kartkę — na czas wyniku je zdejmujemy.
+    map.setMaxBounds(null);
     map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: extra, maxZoom: 7 });
   }
 
@@ -244,6 +282,7 @@
     updateStats(game.rounds, game.rounds, game.total_score);
     $("summary-total").textContent = fmt(game.total_score);
     replay($("summary-stamp"), "pressed");
+    renderRankNote();
     $("summary-max").textContent = fmt(game.max_score);
 
     if (!summaryMap) {
@@ -275,13 +314,33 @@
         <img alt="" loading="lazy">
         <span class="t"><b></b><span></span></span>
         <span class="s">${fmt(r.score)}<span>${fmtKm(r.distance_km)}</span></span>`;
-      li.querySelector("img").src = r.answer ? r.answer.image : "";
+      li.querySelector("img").src = r.answer ? thumb(r.answer.image) : "";
       li.querySelector(".t b").textContent = r.answer ? r.answer.title : "(pytanie usunięte)";
       li.querySelector(".t span").textContent = r.answer ? r.answer.location_name : "";
       list.appendChild(li);
     }
     if (points.length) summaryMap.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 6 });
     window.scrollTo(0, 0);
+  }
+
+  // Informacja pod wynikiem: miejsce w rankingu albo zachęta do zalogowania.
+  function renderRankNote() {
+    const note = $("rank-note");
+    const r = game.ranking;
+    if (r) {
+      note.innerHTML = `<span class="hand"></span> <span class="txt"></span> <a></a>`;
+      note.querySelector(".hand").textContent = r.new_best ? "Nowy rekord!" : "Zapisane.";
+      note.querySelector(".txt").textContent =
+        `Miejsce #${r.position} w rankingu „${game.set.name}”` +
+        (r.week_position ? `, w tym tygodniu #${r.week_position}.` : ".");
+      note.querySelector("a").textContent = "Zobacz ranking";
+      note.querySelector("a").href = r.url;
+    } else if (!document.body.dataset.user) {
+      note.innerHTML = 'Grasz jako gość — <a href="/logowanie">zaloguj się</a>, żeby wyniki trafiały do rankingu.';
+    } else {
+      note.textContent = "Ta gra nie liczy się do rankingu — liczą się tylko pełne gry.";
+    }
+    note.hidden = false;
   }
 
   function escapeHtml(s) {
@@ -323,7 +382,7 @@
     answered ? nextRound() : submitGuess();
   });
 
-  loadCategories();
+  loadSets();
   const saved = store.get();
   if (saved) resume(saved);
 

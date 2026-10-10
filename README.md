@@ -27,7 +27,7 @@ cp .env.example .env
 ```
 
 ```bash
-.venv/Scripts/flask --app app init-db
+.venv/Scripts/flask --app app db upgrade
 ```
 
 ```bash
@@ -44,12 +44,38 @@ cp .env.example .env
 
 Postgres działa na porcie **5433** (`geo` / `geo`, baza `cultureguessr`).
 
+`flask seed` dodaje 4 zestawy (Stroje ludowe, Smaki Europy, Języki i pisma, Zabytki) i 42 pytania. Można go uruchamiać wielokrotnie — istniejące pytania dostają tylko brakujące fakty i zestawy.
+
+### Masz bazę sprzed migracji?
+
+Jeśli baza powstała wcześniej przez `init-db` (bez tabeli `alembic_version`), oznacz ją raz jako wersję początkową, a potem zaktualizuj:
+
+```bash
+.venv/Scripts/flask --app app db stamp 0001_initial
+```
+
+```bash
+.venv/Scripts/flask --app app db upgrade
+```
+
+Zmiana modeli → nowa migracja: `flask --app app db migrate -m "opis"`, przejrzyj plik w `migrations/versions/`, potem `db upgrade`.
+
+## Konta i rankingi
+
+- grać można bez konta; konto (nick + hasło) zapisuje wyniki — `/rejestracja`, `/logowanie`
+- do rankingu trafiają tylko pełne gry zalogowanych graczy (`ROUNDS_PER_GAME` rund albo cały zestaw, jeśli jest krótszy)
+- `/ranking/<zestaw>` — najlepsza gra każdego gracza, wszech czasów i w bieżącym tygodniu (od poniedziałku, czas polski)
+- `/gracz/<nick>` — profil: historia gier, średnia na rundę, rekordy i miejsca w zestawach
+- na serwerze ustaw własny `SECRET_KEY` w `.env` (podpisuje ciasteczko sesji)
+
 ## Dodawanie pytań — `/admin`
 
 - zdjęcie: przeciągnij plik, kliknij, **wklej Ctrl+V** albo podaj URL; pliki są zmniejszane do 1600 px i zapisywane jako WebP w `app/static/uploads/`
 - lokalizacja: **kliknij na mapie** (pinezkę można przeciągać) albo wyszukaj miejsce
 - „Zapisz i dodaj kolejne” zostawia wybraną kategorię; **Ctrl+Enter** zapisuje
 - pytania można wyłączać bez usuwania
+- **karta faktów**: pola pokazywane po zgadnięciu (np. dla stroju: nazwa, region, okazja, elementy, materiały) — „Wstaw pola dla kategorii” podpowiada zestaw pól
+- **zestawy** (`/admin/sets`): nazwa, opis, kolejność, widoczność i lista pytań z filtrem; pytanie może być w kilku zestawach
 
 Ustaw `ADMIN_PASSWORD` w `.env`, żeby zabezpieczyć panel hasłem (Basic Auth, dowolny login).
 
@@ -77,18 +103,22 @@ Potem na telefonie: Chrome → menu → „Zainstaluj aplikację” / Safari →
 
 ```
 app/
-  __init__.py     create_app, komendy CLI (init-db, seed, reset-db)
+  __init__.py     create_app, filtry szablonów, komendy CLI (init-db, seed, reset-db)
   config.py       ustawienia (z .env)
-  models.py       Question, Game, Guess
+  models.py       User, QuestionSet, Question, Game, Guess
   scoring.py      dystans i punkty
   api.py          /api — gra (stan gry trzymany na serwerze)
-  admin.py        /admin — panel
+  auth.py         rejestracja, logowanie, wylogowanie
+  ranking.py      rankingi i profil gracza
+  admin.py        /admin — panel (pytania, zestawy)
   uploads.py      zapis zdjęć
   seed_data.py    przykładowe pytania (Wikimedia Commons)
   templates/      HTML (Jinja)
   static/         css, js, ikony, manifest, service worker
-tests/            pytest (scoring + API na SQLite)
-tools/make_icons.py
+migrations/       migracje bazy (Flask-Migrate / Alembic)
+tests/            pytest (scoring, API, konta, rankingi, panel — na SQLite)
+tools/make_icons.py        ikony PWA
+tools/make_europe_svg.py   mapa do animacji logowania (kontury: Natural Earth)
 ```
 
 Styl „Notatnik podróżnika”, paleta Sepia. Tokeny są na górze `app/static/css/style.css`: `#F4ECD8` papier, `#3E2C1C` atrament, `#704214` główny, `#D08C60` akcent (taśma, margines), `#9A8467` linie, `#7A654C` drobny tekst, `#A3402E` pieczątka. Fonty: EB Garamond (tekst), Caveat (dopiski odręczne), Special Elite (pieczątka). Płasko: bez poświat, rozmytych cieni i gradientów kolorów.

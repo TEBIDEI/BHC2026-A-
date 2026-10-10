@@ -1,4 +1,5 @@
 import os
+from datetime import timedelta
 from pathlib import Path
 
 BASE_DIR = Path(__file__).resolve().parent
@@ -6,7 +7,10 @@ BASE_DIR = Path(__file__).resolve().parent
 
 class Config:
     APP_NAME = "CultureGuessr"
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")  # na serwerze ustaw własny w .env!
+    SESSION_COOKIE_SAMESITE = "Lax"
+    SESSION_COOKIE_HTTPONLY = True
+    PERMANENT_SESSION_LIFETIME = timedelta(days=30)
     SQLALCHEMY_DATABASE_URI = os.environ.get(
         "DATABASE_URL", "postgresql+psycopg2://geo:geo@localhost:5433/cultureguessr"
     )

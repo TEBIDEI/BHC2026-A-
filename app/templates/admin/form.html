@@ -47,6 +47,45 @@
         <label for="description">Ciekawostka (pokazywana po odpowiedzi)</label>
         <textarea name="description" id="description" placeholder="Jedno, dwa zdania.">{{ question.description or '' }}</textarea>
       </div>
+
+      <div class="field">
+        <label>Karta faktów</label>
+        <p class="hint">Krótkie pola pokazywane graczowi po zgadnięciu. Puste wiersze są pomijane.</p>
+        <div class="facts-editor" id="facts-editor">
+          {% for fact in (question.facts or []) %}
+            <div class="fact-row">
+              <input type="text" name="fact_label" value="{{ fact.label }}" placeholder="np. Region" aria-label="Pole">
+              <input type="text" name="fact_value" value="{{ fact.value }}" placeholder="np. Telemark" aria-label="Wartość">
+              <button class="btn btn-sm" type="button" data-remove-fact aria-label="Usuń pole">×</button>
+            </div>
+          {% endfor %}
+        </div>
+        <div class="row-actions">
+          <button class="btn btn-sm" type="button" id="add-fact">+ Pole</button>
+          <button class="btn btn-sm" type="button" id="preset-facts">Wstaw pola dla kategorii</button>
+        </div>
+        <template id="fact-row-tpl">
+          <div class="fact-row">
+            <input type="text" name="fact_label" placeholder="np. Region" aria-label="Pole">
+            <input type="text" name="fact_value" placeholder="np. Telemark" aria-label="Wartość">
+            <button class="btn btn-sm" type="button" data-remove-fact aria-label="Usuń pole">×</button>
+          </div>
+        </template>
+        <script>window.FACT_PRESETS = {{ fact_presets | tojson }};</script>
+      </div>
+
+      <div class="field">
+        <label>Zestawy</label>
+        {% if sets %}
+          <div class="checks">
+            {% for s in sets %}
+              <label class="check"><input type="checkbox" name="sets" value="{{ s.id }}" {% if s.id in selected_set_ids %}checked{% endif %}> {{ s.name }}</label>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="hint">Nie ma jeszcze zestawów — <a href="{{ url_for('admin.set_new') }}">utwórz pierwszy</a>.</p>
+        {% endif %}
+      </div>
     </div>
 
     <div class="card">

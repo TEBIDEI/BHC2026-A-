@@ -1,0 +1,44 @@
+{% extends "page.html" %}
+{% block title %}Ranking: {{ title }} — {{ app_name }}{% endblock %}
+{% block page %}
+<p class="hand kicker">tablica wyników</p>
+<h1>Ranking</h1>
+
+<nav class="tabs" aria-label="Zestaw">
+  {% for s, name in choices %}
+    <a href="{{ url_for('ranking.board', slug=s, okres=period) }}" {% if s == slug %}aria-current="page"{% endif %}>{{ name }}</a>
+  {% endfor %}
+</nav>
+<nav class="tabs tabs-small" aria-label="Okres">
+  {% for key, label in periods.items() %}
+    <a href="{{ url_for('ranking.board', slug=slug, okres=key) }}" {% if key == period %}aria-current="page"{% endif %}>{{ label }}</a>
+  {% endfor %}
+</nav>
+
+<p class="muted">
+  Najlepsza pojedyncza gra każdego gracza w zestawie „{{ title }}”{% if week_from %}, od poniedziałku {{ week_from.strftime('%d.%m') }}{% endif %}.
+  Liczą się pełne gry zalogowanych graczy.
+</p>
+
+{% if rows %}
+  <ol class="leaderboard">
+    {% for row in rows %}
+      <li {% if current_user and row.username == current_user.username %}class="me"{% endif %}>
+        <span class="pos">{{ loop.index }}.</span>
+        <a class="who" href="{{ url_for('ranking.profile', username=row.username) }}">{{ row.username }}</a>
+        <span class="games">{{ row.games | gier }}</span>
+        <span class="pts">{{ row.best | pkt }}</span>
+      </li>
+    {% endfor %}
+  </ol>
+{% else %}
+  <div class="empty-note">
+    <p>Nikt jeszcze nie trafił tu do rankingu{% if week_from %} w tym tygodniu{% endif %}. Możesz być pierwszy.</p>
+  </div>
+{% endif %}
+
+<p class="actions">
+  <a class="btn btn-primary" href="/?zestaw={{ slug }}">Zagraj w ten zestaw</a>
+  {% if not current_user %}<a class="btn" href="{{ url_for('auth.login', next=request.path) }}">Zaloguj się</a>{% endif %}
+</p>
+{% endblock %}

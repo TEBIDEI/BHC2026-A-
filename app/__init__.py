@@ -1,27 +1,55 @@
+from pathlib import Path
+from zoneinfo import ZoneInfo
+
 import click
 from flask import Flask, render_template, send_from_directory
+from flask_migrate import Migrate, upgrade
 
 from .config import Config
-from .models import CATEGORIES, Question, db
+from .models import Question, QuestionSet, db
 
 
 def create_app(config_class=Config):
     app = Flask(__name__)
     app.config.from_object(config_class)
     db.init_app(app)
+    Migrate(app, db, directory=str(Path(__file__).resolve().parent.parent / "migrations"))
 
-    from . import admin, api
+    from . import admin, api, auth, ranking
 
+    app.register_blueprint(auth.bp)
     app.register_blueprint(api.bp)
+    app.register_blueprint(ranking.bp)
     app.register_blueprint(admin.bp)
 
     @app.context_processor
     def inject_globals():
         return {"app_name": app.config["APP_NAME"]}
 
+    @app.template_filter("pkt")
+    def format_points(value):
+        """12345 -> „12 345” (twarda spacja jako separator tysięcy)."""
+        return f"{int(value or 0):,}".replace(",", " ")
+
+    @app.template_filter("gier")
+    def games_count(n):
+        """Polska odmiana: 1 gra, 2 gry, 5 gier, 22 gry."""
+        if n == 1:
+            return f"{n} gra"
+        if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
+            return f"{n} gry"
+        return f"{n} gier"
+
+    @app.template_filter("data")
+    def format_date(value, godzina=True):
+        if not value:
+            return ""
+        local = value.astimezone(ZoneInfo("Europe/Warsaw"))
+        return local.strftime("%d.%m.%Y, %H:%M" if godzina else "%d.%m.%Y")
+
     @app.get("/")
     def index():
-        return render_template("index.html", categories=CATEGORIES)
+        return render_template("index.html")
 
     # Service worker i manifest muszą być serwowane z katalogu głównego,
     # żeby obejmowały całą aplikację.
@@ -44,29 +72,49 @@ def create_app(config_class=Config):
 def register_cli(app):
     @app.cli.command("init-db")
     def init_db():
-        """Tworzy tabele."""
-        db.create_all()
-        click.echo("Tabele utworzone.")
+        """Tworzy/aktualizuje tabele (to samo co `flask db upgrade`)."""
+        upgrade()
+        click.echo("Baza aktualna.")
 
     @app.cli.command("reset-db")
     @click.confirmation_option(prompt="Usunąć WSZYSTKIE dane?")
     def reset_db():
-        """Usuwa i tworzy tabele od nowa."""
+        """Usuwa wszystkie tabele i tworzy je od nowa migracjami."""
         db.drop_all()
-        db.create_all()
+        db.session.execute(db.text("DROP TABLE IF EXISTS alembic_version"))
+        db.session.commit()
+        upgrade()
         click.echo("Baza wyczyszczona.")
 
     @app.cli.command("seed")
-    @click.option("--force", is_flag=True, help="Dodaj nawet jeśli baza ma już pytania.")
-    def seed(force):
-        """Dodaje przykładowe pytania."""
-        from .seed_data import QUESTIONS
+    def seed():
+        """Dodaje przykładowe zestawy i pytania. Bezpieczne do ponownego uruchomienia:
+        istniejące pytania (po tytule) dostają tylko brakujące fakty i zestawy."""
+        from .seed_data import QUESTIONS, SETS
 
-        db.create_all()
-        if Question.query.count() and not force:
-            click.echo("Baza ma już pytania — pomijam (użyj --force).")
-            return
+        sets = {}
+        for position, data in enumerate(SETS):
+            qs = QuestionSet.query.filter_by(slug=data["slug"]).first()
+            if not qs:
+                qs = QuestionSet(position=position, **data)
+                db.session.add(qs)
+            sets[data["slug"]] = qs
+
+        added = updated = 0
         for data in QUESTIONS:
-            db.session.add(Question(**data))
+            data = dict(data)
+            set_slugs = data.pop("sets", [])
+            question = Question.query.filter_by(title=data["title"]).first()
+            if question:
+                if not question.facts and data.get("facts"):
+                    question.facts = data["facts"]
+                    updated += 1
+            else:
+                question = Question(**data)
+                db.session.add(question)
+                added += 1
+            for slug in set_slugs:
+                if sets[slug] not in question.sets:
+                    question.sets.append(sets[slug])
         db.session.commit()
-        click.echo(f"Dodano {len(QUESTIONS)} pytań.")
+        click.echo(f"Zestawy: {len(sets)}. Nowe pytania: {added}, uzupełnione fakty: {updated}.")

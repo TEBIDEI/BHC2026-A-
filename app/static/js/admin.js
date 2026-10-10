@@ -210,6 +210,27 @@
     if (/^https?:\/\//.test(url)) { fileInput.value = ""; showPreview(url); }
   });
 
+  // Karta faktów: dodawanie/usuwanie wierszy i gotowe pola dla kategorii
+  const factsEditor = $("facts-editor");
+  const factTpl = $("fact-row-tpl");
+  function addFact(label = "", focus = true) {
+    const row = factTpl.content.firstElementChild.cloneNode(true);
+    row.querySelector('[name="fact_label"]').value = label;
+    factsEditor.appendChild(row);
+    if (focus) row.querySelector(label ? '[name="fact_value"]' : '[name="fact_label"]').focus();
+  }
+  $("add-fact").addEventListener("click", () => addFact());
+  function insertPresets(focus) {
+    const existing = new Set([...factsEditor.querySelectorAll('[name="fact_label"]')].map((i) => i.value.trim()));
+    const labels = (window.FACT_PRESETS[$("category").value] || []).filter((l) => !existing.has(l));
+    labels.forEach((l, i) => addFact(l, focus && i === 0));
+  }
+  $("preset-facts").addEventListener("click", () => insertPresets(true));
+  factsEditor.addEventListener("click", (e) => {
+    if (e.target.closest("[data-remove-fact]")) e.target.closest(".fact-row").remove();
+  });
+  if (!factsEditor.children.length) insertPresets(false);
+
   // Ctrl+Enter = zapisz
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {

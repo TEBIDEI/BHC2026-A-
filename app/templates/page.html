@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{# Zwykła strona tekstowa (ranking, profil): nagłówek + kartka. #}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="/">{{ app_name }}</a>
+  {% include "_usernav.html" %}
+</header>
+<main class="sheet-page">
+  {% block page %}{% endblock %}
+</main>
+{% endblock %}

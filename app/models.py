@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
+from werkzeug.security import check_password_hash, generate_password_hash
 
 db = SQLAlchemy()
 
@@ -16,9 +17,69 @@ CATEGORIES = {
     "inne": "Inne",
 }
 
+# Podpowiadane pola karty faktów (panel admina) — można dopisywać własne.
+FACT_PRESETS = {
+    "stroj": ["Nazwa", "Region", "Okazja", "Charakterystyczne elementy", "Materiały"],
+    "kuchnia": ["Główne składniki", "Kiedy się je", "Pochodzenie nazwy"],
+    "jezyk": ["Język", "Pismo", "Liczba mówiących", "Status"],
+    "architektura": ["Styl", "Czas powstania", "Materiał", "Ciekawostka"],
+    "muzyka": ["Nazwa", "Instrumenty", "Okazja"],
+    "zwyczaje": ["Nazwa", "Kiedy", "Region"],
+    "inne": [],
+}
+
 
 def _now():
     return datetime.now(timezone.utc)
+
+
+class User(db.Model):
+    __tablename__ = "users"
+
+    id = db.Column(db.Integer, primary_key=True)
+    username = db.Column(db.String(32), nullable=False)
+    # Nick jest unikalny bez względu na wielkość liter.
+    username_key = db.Column(db.String(32), nullable=False, unique=True)
+    password_hash = db.Column(db.String(255), nullable=False)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
+
+    def set_password(self, password):
+        self.password_hash = generate_password_hash(password)
+
+    def check_password(self, password):
+        return check_password_hash(self.password_hash, password)
+
+
+set_questions = db.Table(
+    "set_questions",
+    db.Column("set_id", db.Integer, db.ForeignKey("question_sets.id", ondelete="CASCADE"), primary_key=True),
+    db.Column("question_id", db.Integer, db.ForeignKey("questions.id", ondelete="CASCADE"), primary_key=True),
+)
+
+
+class QuestionSet(db.Model):
+    __tablename__ = "question_sets"
+
+    id = db.Column(db.Integer, primary_key=True)
+    slug = db.Column(db.String(80), nullable=False, unique=True)
+    name = db.Column(db.String(120), nullable=False)
+    description = db.Column(db.Text)
+    position = db.Column(db.Integer, nullable=False, default=0)
+    active = db.Column(db.Boolean, nullable=False, default=True)
+    created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
+
+    questions = db.relationship(
+        "Question", secondary=set_questions, back_populates="sets", order_by="Question.id"
+    )
+
+    @property
+    def active_questions(self):
+        return [q for q in self.questions if q.active]
+
+    @property
+    def cover(self):
+        qs = self.active_questions
+        return qs[0].image_src if qs else None
 
 
 class Question(db.Model):
@@ -29,6 +90,8 @@ class Question(db.Model):
     category = db.Column(db.String(32), nullable=False, default="inne", index=True)
     location_name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
+    # Karta faktów: [{"label": "Region", "value": "Telemark"}, ...]
+    facts = db.Column(db.JSON, nullable=False, default=list)
     lat = db.Column(db.Float, nullable=False)
     lng = db.Column(db.Float, nullable=False)
     image_filename = db.Column(db.String(255))
@@ -36,6 +99,8 @@ class Question(db.Model):
     image_credit = db.Column(db.String(500))
     active = db.Column(db.Boolean, nullable=False, default=True, index=True)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
+
+    sets = db.relationship("QuestionSet", secondary=set_questions, back_populates="questions")
 
     @property
     def category_label(self):
@@ -59,8 +124,10 @@ class Question(db.Model):
     def answer_dict(self):
         return {
             "title": self.title,
+            "category": self.category,
             "location_name": self.location_name,
             "description": self.description,
+            "facts": [f for f in (self.facts or []) if f.get("label") and f.get("value")],
             "lat": self.lat,
             "lng": self.lng,
             "image": self.image_src,
@@ -75,8 +142,15 @@ class Game(db.Model):
     question_ids = db.Column(db.JSON, nullable=False)
     current_round = db.Column(db.Integer, nullable=False, default=0)  # 0-based
     total_score = db.Column(db.Integer, nullable=False, default=0)
+    user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True)
+    set_id = db.Column(db.Integer, db.ForeignKey("question_sets.id", ondelete="SET NULL"), index=True)
+    # Gra liczy się do rankingu: zalogowany gracz i pełna długość (nie skrócona gra).
+    ranked = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
+    finished_at = db.Column(db.DateTime(timezone=True), index=True)
 
+    user = db.relationship("User")
+    question_set = db.relationship("QuestionSet")
     guesses = db.relationship(
         "Guess", backref="game", order_by="Guess.round", cascade="all, delete-orphan"
     )

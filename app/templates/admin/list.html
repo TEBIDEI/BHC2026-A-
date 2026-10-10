@@ -3,11 +3,17 @@
 {% block admin %}
 <div class="admin-head">
   <h1>Pytania <span class="muted small">({{ questions|length }}{% if questions|length != total %} z {{ total }}{% endif %})</span></h1>
-  <a class="btn btn-primary" href="{{ url_for('admin.new', category=category or None) }}">+ Dodaj pytanie</a>
+  <a class="btn btn-primary" href="{{ url_for('admin.new', category=category or None, set=set_slug or None) }}">+ Dodaj pytanie</a>
 </div>
 
 <form class="filters" method="get">
   <input type="search" name="q" value="{{ search }}" placeholder="Szukaj po tytule lub miejscu…">
+  <select name="set" onchange="this.form.submit()">
+    <option value="">Wszystkie zestawy</option>
+    {% for s in sets %}
+      <option value="{{ s.slug }}" {% if s.slug == set_slug %}selected{% endif %}>{{ s.name }}</option>
+    {% endfor %}
+  </select>
   <select name="category" onchange="this.form.submit()">
     <option value="">Wszystkie kategorie</option>
     {% for key, label in categories.items() %}
@@ -28,6 +34,7 @@
           <div class="meta">{{ q.location_name }}</div>
           <div class="meta">
             <span class="badge">{{ q.category_label }}</span>
+            {% for s in q.sets %}<span class="badge badge-set">{{ s.name }}</span>{% endfor %}
             {% if not q.active %}<span class="badge badge-off">wyłączone</span>{% endif %}
             <span class="small">{{ '%.3f'|format(q.lat) }}, {{ '%.3f'|format(q.lng) }}</span>
           </div>
