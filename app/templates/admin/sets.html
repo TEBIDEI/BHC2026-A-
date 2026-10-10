@@ -1,5 +1,5 @@
 {% extends "admin/_layout.html" %}
-{% block title %}Zestawy — {{ app_name }}{% endblock %}
+{% block title %}Zestawy - {{ app_name }}{% endblock %}
 {% block admin %}
 <div class="admin-head">
   <h1>Zestawy <span class="muted small">({{ sets|length }})</span></h1>
@@ -15,7 +15,7 @@
           <td>{{ s.position }}</td>
           <td>
             <b>{{ s.name }}</b> {% if not s.active %}<span class="badge badge-off">ukryty</span>{% endif %}<br>
-            <span class="muted small">/{{ s.slug }} — {{ s.description or 'bez opisu' }}</span>
+            <span class="muted small">/{{ s.slug }}: {{ s.description or 'bez opisu' }}</span>
           </td>
           <td class="num"><a href="{{ url_for('admin.index', set=s.slug) }}">{{ s.active_questions|length }} / {{ s.questions|length }}</a></td>
           <td class="num">

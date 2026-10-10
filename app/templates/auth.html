@@ -1,5 +1,5 @@
 {% extends "base.html" %}
-{% block title %}{{ 'Zaloguj się' if mode == 'login' else 'Załóż konto' }} — {{ app_name }}{% endblock %}
+{% block title %}{{ 'Zaloguj się' if mode == 'login' else 'Załóż konto' }} - {{ app_name }}{% endblock %}
 {% block body %}
 <header class="topbar">
   <a class="brand" href="/">{{ app_name }}</a>
@@ -7,11 +7,11 @@
 </header>
 
 <main class="auth">
+  {# cebularz: ta animacja jest ładniejsza niż cała reszta projektu razem wzięta, nie dotykać #}
   <figure class="atlas" aria-hidden="true">
     <svg class="atlas-map" viewBox="0 0 800 640" preserveAspectRatio="xMidYMid meet">
       <defs>
-        {# Ikony rysowane kreską — 40×40, sam kontur w kolorze atramentu. #}
-        <symbol id="i-eiffel" viewBox="0 0 40 40"><path d="M20 2v3M12 38 20 5l8 33M14.6 28h10.8M16.9 18h6.2M15 38q5-8 10 0"/></symbol>
+                <symbol id="i-eiffel" viewBox="0 0 40 40"><path d="M20 2v3M12 38 20 5l8 33M14.6 28h10.8M16.9 18h6.2M15 38q5-8 10 0"/></symbol>
         <symbol id="i-pizza" viewBox="0 0 40 40"><path d="M6 11h28L20 37Z"/><path d="M5 10q15-6 30 0"/><circle cx="16" cy="17" r="2.2"/><circle cx="24" cy="18" r="2.2"/><circle cx="20" cy="26" r="2"/></symbol>
         <symbol id="i-windmill" viewBox="0 0 40 40"><path d="M15 38l2-20h6l2 20M16 18l4-5 4 5M20 15 8 5M20 15 32 5M20 15 8 25M20 15l12 10M19 38v-5h2v5"/></symbol>
         <symbol id="i-pierogi" viewBox="0 0 40 40"><path d="M5 27q15-22 30 0Z"/><path d="M9 21l2-3M13 16l2-3M18.5 13.5l1.5-3M23 13.5l1.5-2.7M27 16l1.5-2.5M31 20l1.5-2.5"/></symbol>
@@ -28,13 +28,13 @@
         <circle r="26"/><path d="M0-38 4 0 0 38-4 0ZM-38 0 0 4 38 0 0-4Z"/><text y="-44" text-anchor="middle">N</text>
       </g>
     </svg>
-    <figcaption class="hand">Europa — mapa podróży</figcaption>
+    <figcaption class="hand">Europa, mapa podróży</figcaption>
   </figure>
 
   <section class="auth-form">
     <p class="hand kicker">{{ 'witaj z powrotem' if mode == 'login' else 'nowy podróżnik' }}</p>
     <h1>{{ 'Zaloguj się' if mode == 'login' else 'Załóż konto' }}</h1>
-    <p class="muted">Konto zapisuje Twoje wyniki w rankingach. Bez niego też zagrasz — tylko wyniki nigdzie nie trafią.</p>
+    <p class="muted">Konto zapisuje Twoje wyniki w rankingach. Bez niego też zagrasz, tylko wyniki nigdzie nie trafią.</p>
 
     <form method="post" novalidate>
       <input type="hidden" name="next" value="{{ next }}">
@@ -42,7 +42,7 @@
         <label for="username">Nick</label>
         <input type="text" id="username" name="username" value="{{ username }}" autocomplete="username"
                autocapitalize="none" spellcheck="false" maxlength="20" required {% if not username %}autofocus{% endif %}>
-        {% if mode == 'register' %}<p class="hint">3–20 znaków: litery, cyfry, kropka, myślnik, podkreślnik.</p>{% endif %}
+        {% if mode == 'register' %}<p class="hint">3-20 znaków: litery, cyfry, kropka, myślnik, podkreślnik.</p>{% endif %}
       </div>
       <div class="field">
         <label for="password">Hasło</label>

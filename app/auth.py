@@ -7,6 +7,7 @@ from .models import User, db
 
 bp = Blueprint("auth", __name__)
 
+# Hubi: emoji w nicku nie będzie, nie płacz Michał
 USERNAME_RE = re.compile(r"^[\w.-]{3,20}$")
 MIN_PASSWORD = 6
 
@@ -34,7 +35,6 @@ def login_required(view):
 
 def _safe_next(default="/"):
     target = request.values.get("next", "")
-    # Tylko ścieżki w obrębie aplikacji — bez otwartych przekierowań.
     if target.startswith("/") and not target.startswith("//") and "\\" not in target:
         return target.rstrip("?") or default
     return default
@@ -74,7 +74,7 @@ def register():
         password = request.form.get("password", "")
         password2 = request.form.get("password2", "")
         if not USERNAME_RE.match(username):
-            error = "Nick: 3–20 znaków — litery, cyfry, kropka, myślnik lub podkreślnik."
+            error = "Nick: 3-20 znaków (litery, cyfry, kropka, myślnik lub podkreślnik)."
         elif len(password) < MIN_PASSWORD:
             error = f"Hasło musi mieć co najmniej {MIN_PASSWORD} znaków."
         elif password != password2:

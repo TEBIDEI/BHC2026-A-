@@ -20,4 +20,4 @@ def test_score_decreases_and_stays_in_range():
     scores = [score_from_distance(d) for d in (16, 100, 500, 1000, 2000, 5000)]
     assert scores == sorted(scores, reverse=True)
     assert all(0 <= s <= 5000 for s in scores)
-    assert score_from_distance(16) > 4990  # bez skoku tuż za promieniem
+    assert score_from_distance(16) > 4990

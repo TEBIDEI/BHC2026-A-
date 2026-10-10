@@ -1,5 +1,5 @@
 {% extends "admin/_layout.html" %}
-{% block title %}{{ 'Edytuj' if question.id else 'Nowe pytanie' }} — {{ app_name }}{% endblock %}
+{% block title %}{{ 'Edytuj' if question.id else 'Nowe pytanie' }} - {{ app_name }}{% endblock %}
 {% block admin %}
 <div class="admin-head">
   <h1>{{ 'Edytuj: ' ~ question.title if question.id else 'Nowe pytanie' }}</h1>
@@ -83,7 +83,7 @@
             {% endfor %}
           </div>
         {% else %}
-          <p class="hint">Nie ma jeszcze zestawów — <a href="{{ url_for('admin.set_new') }}">utwórz pierwszy</a>.</p>
+          <p class="hint">Nie ma jeszcze zestawów. <a href="{{ url_for('admin.set_new') }}">Utwórz pierwszy</a>.</p>
         {% endif %}
       </div>
     </div>
@@ -95,14 +95,43 @@
         <ul class="geo-results" id="geo-results" hidden></ul>
       </div>
       <div class="picker-map" id="picker-map"></div>
-      <p class="muted small" style="margin:.4rem 0 0">Kliknij na mapie lub przeciągnij pinezkę.</p>
+      <p class="muted small" style="margin:.4rem 0 0">Kliknij na mapie lub przeciągnij pinezkę. To punkt reprezentatywny (znacznik na mapach).</p>
       <div class="coords">
         <input type="number" step="any" name="lat" id="lat" value="{{ question.lat if question.lat is not none else '' }}" placeholder="szer. (lat)" required>
         <input type="number" step="any" name="lng" id="lng" value="{{ question.lng if question.lng is not none else '' }}" placeholder="dł. (lng)" required>
       </div>
+
+      <div class="field" style="margin-top:1rem">
+        <label>Poziom odpowiedzi</label>
+        <div class="chips" role="radiogroup" aria-label="Poziom odpowiedzi">
+          {% for key, label in levels.items() %}
+            <label class="chip"><input type="radio" name="area_level" value="{{ key }}" {% if key == (question.area_level or 'punkt') %}checked{% endif %}><span>{{ label }}</span></label>
+          {% endfor %}
+        </div>
+        <p class="hint" id="level-hint">Kliknięcie wewnątrz obszaru = pełne punkty, poza nim liczy się odległość do granicy.</p>
+      </div>
+
+      <div class="area-tools" id="area-tools">
+        <div class="row-actions">
+          <button class="btn btn-sm" type="button" id="find-area">Znajdź granicę</button>
+          <label class="check small"><input type="checkbox" id="area-append"> dołącz do obecnej (np. kilka regionów)</label>
+          <button class="btn btn-sm btn-danger" type="button" id="clear-area">Usuń obszar</button>
+        </div>
+        <ul class="geo-results area-results" id="area-results" hidden></ul>
+        <p class="hint" id="area-status"></p>
+        <details>
+          <summary class="small">Wklej własny GeoJSON</summary>
+          <textarea id="area-paste" placeholder='{"type": "Polygon", "coordinates": [...]}'></textarea>
+          <button class="btn btn-sm" type="button" id="apply-paste">Użyj</button>
+        </details>
+        <input type="hidden" name="area_geojson" id="area-geojson" value="{{ request.form.get('area_geojson', '') }}">
+        <input type="hidden" name="area_clear" id="area-clear" value="">
+        <script>window.AREA = {{ area_json | tojson }};</script>
+      </div>
+
       <div class="field" style="margin-top:1rem">
         <label for="location-name">Nazwa miejsca (pokazywana graczowi)</label>
-        <input type="text" name="location_name" id="location-name" value="{{ question.location_name or '' }}" placeholder="np. Łowicz, Polska" required>
+        <input type="text" name="location_name" id="location-name" value="{{ question.location_name or '' }}" placeholder="np. Powiat łowicki, Polska" required>
       </div>
     </div>
   </div>

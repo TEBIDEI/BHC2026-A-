@@ -1,5 +1,3 @@
-// CultureGuessr service worker: offline-owa powłoka aplikacji.
-// API i panel admina zawsze idą do sieci.
 const CACHE = "cultureguessr-v2";
 const SHELL = [
   "/",
@@ -30,7 +28,6 @@ self.addEventListener("fetch", (event) => {
 
   if (sameOrigin && (url.pathname.startsWith("/api/") || url.pathname.startsWith("/admin"))) return;
 
-  // Strona: najpierw sieć, w razie braku — cache.
   if (req.mode === "navigate") {
     event.respondWith(
       fetch(req)
@@ -40,7 +37,6 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Statyki i Leaflet: najpierw sieć (świeże pliki przy edycji), offline — cache.
   if ((sameOrigin && url.pathname.startsWith("/static/") && !url.pathname.startsWith("/static/uploads/"))
       || url.hostname === "unpkg.com") {
     event.respondWith(

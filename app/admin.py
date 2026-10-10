@@ -14,7 +14,8 @@ from flask import (
 )
 from sqlalchemy import or_
 
-from .models import CATEGORIES, FACT_PRESETS, Question, QuestionSet, db
+from .geo import AreaError, area_from_geojson, question_area_geojson
+from .models import AREA_LEVELS, CATEGORIES, FACT_PRESETS, Question, QuestionSet, db
 from .uploads import UploadError, delete_image, save_image
 
 bp = Blueprint("admin", __name__, url_prefix="/admin")
@@ -97,7 +98,6 @@ def _question_form(question, selected_set_ids):
                 chosen = [s.slug for s in question.sets]
                 return redirect(url_for("admin.new", category=question.category, set=chosen))
             return redirect(url_for("admin.index"))
-    # Niezapisane zmiany nie mogą trafić do bazy przy okazji zapytań z szablonu.
     with db.session.no_autoflush:
         return render_template(
             "admin/form.html",
@@ -106,6 +106,8 @@ def _question_form(question, selected_set_ids):
             sets=all_sets,
             selected_set_ids=selected_set_ids,
             fact_presets=FACT_PRESETS,
+            levels=AREA_LEVELS,
+            area_json=question_area_geojson(question),
         )
 
 
@@ -128,7 +130,6 @@ def delete(question_id):
 
 
 def _fill_from_form(question):
-    """Przepisuje dane z formularza do pytania. Zwraca False (i flashuje błędy), gdy są niepoprawne."""
     form = request.form
     errors = []
 
@@ -157,6 +158,19 @@ def _fill_from_form(question):
     except ValueError:
         errors.append("Kliknij na mapie, żeby ustawić lokalizację.")
 
+    level = form.get("area_level", "punkt")
+    question.area_level = level if level in AREA_LEVELS else "punkt"
+    new_area = form.get("area_geojson", "").strip()
+    if question.area_level == "punkt" or form.get("area_clear") == "1":
+        question.area = None
+    if question.area_level != "punkt" and new_area:
+        try:
+            question.area = area_from_geojson(new_area, question.area_level)
+        except AreaError as exc:
+            errors.append(f"Granica obszaru: {exc}")
+    if question.area_level != "punkt" and question.area is None and not errors:
+        errors.append("Wybierz granicę obszaru („Znajdź granicę”) albo ustaw poziom „Punkt”.")
+
     old_filename = question.image_filename
     file = request.files.get("image_file")
     image_url = form.get("image_url", "").strip()
@@ -173,7 +187,6 @@ def _fill_from_form(question):
         errors.append("Dodaj zdjęcie (plik, wklejenie Ctrl+V albo URL).")
 
     if errors:
-        # Formularz wraca z wpisanymi danymi; nowo zapisany plik nie jest potrzebny.
         if question.image_filename != old_filename:
             delete_image(question.image_filename)
             question.image_filename = old_filename
@@ -184,8 +197,6 @@ def _fill_from_form(question):
         delete_image(old_filename)
     return True
 
-
-# ---------- Zestawy pytań ----------
 
 def _all_sets():
     return QuestionSet.query.order_by(QuestionSet.position, QuestionSet.name).all()

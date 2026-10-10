@@ -1,37 +1,27 @@
 import pytest
 
-from app import create_app
-from app.config import Config
 from app.models import Question, QuestionSet, db
-
-
-class TestConfig(Config):
-    TESTING = True
-    SQLALCHEMY_DATABASE_URI = "sqlite://"
-    SQLALCHEMY_ENGINE_OPTIONS = {}
-    ADMIN_PASSWORD = ""
-    ROUNDS_PER_GAME = 3
-
 
 KRAKOW = {"lat": 50.0647, "lng": 19.945}
 
 
+def _seed():
+    food = QuestionSet(slug="smaki", name="Smaki")
+    db.session.add(food)
+    for i in range(4):
+        q = Question(
+            title=f"Q{i}", category="kuchnia", location_name="Kraków", image_url="https://example.com/x.jpg",
+            facts=[{"label": "Region", "value": "Małopolska"}], **KRAKOW,
+        )
+        if i < 3:
+            q.sets.append(food)
+        db.session.add(q)
+
+
 @pytest.fixture
-def app():
-    app = create_app(TestConfig)
+def app(make_app):
+    app = make_app(_seed)
     with app.app_context():
-        db.create_all()
-        food = QuestionSet(slug="smaki", name="Smaki")
-        db.session.add(food)
-        for i in range(4):
-            q = Question(
-                title=f"Q{i}", category="kuchnia", location_name="Kraków", image_url="https://example.com/x.jpg",
-                facts=[{"label": "Region", "value": "Małopolska"}], **KRAKOW,
-            )
-            if i < 3:
-                q.sets.append(food)
-            db.session.add(q)
-        db.session.commit()
         yield app
 
 
@@ -59,7 +49,7 @@ def test_guest_game_is_not_ranked(client):
     res = client.post("/api/games", json={"set": "smaki"})
     assert res.status_code == 201
     game = res.get_json()
-    assert "lat" not in game["question"]  # odpowiedź nie wycieka
+    assert "lat" not in game["question"]
     assert game["ranked"] is False
 
     state = play(client)
@@ -117,7 +107,7 @@ def test_ranked_game_and_leaderboard(client):
 
     client.post("/wyloguj")
     register(client, "bartek")
-    worse = play(client, point={"lat": 52.23, "lng": 21.01})  # Warszawa, ~250 km od Krakowa
+    worse = play(client, point={"lat": 52.23, "lng": 21.01})
     assert worse["ranking"]["position"] == 2
 
     board = client.get("/ranking/smaki").get_data(as_text=True).split("leaderboard", 1)[1]

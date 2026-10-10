@@ -28,12 +28,10 @@ def create_app(config_class=Config):
 
     @app.template_filter("pkt")
     def format_points(value):
-        """12345 -> „12 345” (twarda spacja jako separator tysięcy)."""
         return f"{int(value or 0):,}".replace(",", " ")
 
     @app.template_filter("gier")
     def games_count(n):
-        """Polska odmiana: 1 gra, 2 gry, 5 gier, 22 gry."""
         if n == 1:
             return f"{n} gra"
         if n % 10 in (2, 3, 4) and n % 100 not in (12, 13, 14):
@@ -51,8 +49,6 @@ def create_app(config_class=Config):
     def index():
         return render_template("index.html")
 
-    # Service worker i manifest muszą być serwowane z katalogu głównego,
-    # żeby obejmowały całą aplikację.
     @app.get("/sw.js")
     def service_worker():
         response = send_from_directory(app.static_folder, "sw.js", mimetype="application/javascript")
@@ -72,14 +68,12 @@ def create_app(config_class=Config):
 def register_cli(app):
     @app.cli.command("init-db")
     def init_db():
-        """Tworzy/aktualizuje tabele (to samo co `flask db upgrade`)."""
         upgrade()
         click.echo("Baza aktualna.")
 
     @app.cli.command("reset-db")
     @click.confirmation_option(prompt="Usunąć WSZYSTKIE dane?")
     def reset_db():
-        """Usuwa wszystkie tabele i tworzy je od nowa migracjami."""
         db.drop_all()
         db.session.execute(db.text("DROP TABLE IF EXISTS alembic_version"))
         db.session.commit()
@@ -88,9 +82,13 @@ def register_cli(app):
 
     @app.cli.command("seed")
     def seed():
-        """Dodaje przykładowe zestawy i pytania. Bezpieczne do ponownego uruchomienia:
-        istniejące pytania (po tytule) dostają tylko brakujące fakty i zestawy."""
+        import json
+
+        from .geo import area_from_geojson
         from .seed_data import QUESTIONS, SETS
+
+        areas_file = Path(__file__).resolve().parent / "seed_areas.json"
+        seed_areas = json.loads(areas_file.read_text(encoding="utf-8")) if areas_file.exists() else {}
 
         sets = {}
         for position, data in enumerate(SETS):
@@ -100,7 +98,7 @@ def register_cli(app):
                 db.session.add(qs)
             sets[data["slug"]] = qs
 
-        added = updated = 0
+        added = updated = with_area = 0
         for data in QUESTIONS:
             data = dict(data)
             set_slugs = data.pop("sets", [])
@@ -116,5 +114,13 @@ def register_cli(app):
             for slug in set_slugs:
                 if sets[slug] not in question.sets:
                     question.sets.append(sets[slug])
+            area = seed_areas.get(question.title)
+            if area and question.area is None:
+                question.area = area_from_geojson(area["geojson"], area["level"])
+                question.area_level = area["level"]
+                question.location_name = area["name"]
+                with_area += 1
         db.session.commit()
-        click.echo(f"Zestawy: {len(sets)}. Nowe pytania: {added}, uzupełnione fakty: {updated}.")
+        click.echo(
+            f"Zestawy: {len(sets)}. Nowe pytania: {added}, uzupełnione fakty: {updated}, nowe obszary: {with_area}."
+        )

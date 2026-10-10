@@ -1,5 +1,5 @@
 {% extends "admin/_layout.html" %}
-{% block title %}{{ 'Edytuj zestaw' if qs.id else 'Nowy zestaw' }} — {{ app_name }}{% endblock %}
+{% block title %}{{ 'Edytuj zestaw' if qs.id else 'Nowy zestaw' }} - {{ app_name }}{% endblock %}
 {% block admin %}
 <div class="admin-head">
   <h1>{{ 'Zestaw: ' ~ qs.name if qs.id else 'Nowy zestaw' }}</h1>

@@ -1,12 +1,11 @@
-/* CultureGuessr — styl „Notatnik podróżnika”, paleta Sepia.
-   Płasko: bez poświat, rozmytych cieni i gradientów kolorów. */
 :root {
   --bg: #F4ECD8;
   --ink: #3E2C1C;
   --primary: #704214;
   --accent: #D08C60;
-  --muted: #9A8467;      /* linie, obramowania */
-  --muted-ink: #7A654C;  /* drobny tekst — #9A8467 ma za mały kontrast */
+  --muted: #9A8467;
+  /* Michał: #9A8467 na papierze czytał tylko cebularz, bo i tak nikt nie wie, co on czyta */
+  --muted-ink: #7A654C;
 
   --surface: #FBF6EA;
   --line: #E2D5B9;
@@ -16,7 +15,7 @@
 
   --radius: 3px;
   --radius-sm: 2px;
-  --rule: 28px;          /* odstęp linii na papierze */
+  --rule: 28px;
   --rule-color: #EBE1CA;
   --font: "EB Garamond", Georgia, "Times New Roman", serif;
   --font-hand: "Caveat", "Segoe Print", "Bradley Hand", cursive;
@@ -42,7 +41,6 @@ img { max-width: 100%; }
 .muted { color: var(--muted-ink); }
 .small { font-size: .85rem; }
 
-/* ---------- Pasek górny ---------- */
 .topbar {
   display: flex; align-items: center; justify-content: space-between; gap: 1rem;
   height: 56px; padding: 0 16px;
@@ -57,7 +55,6 @@ img { max-width: 100%; }
 .topbar nav a { color: var(--ink); text-decoration: none; margin-left: 1rem; }
 .topbar nav a:hover { color: var(--primary); text-decoration: underline; }
 
-/* ---------- Przyciski ---------- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   min-height: 44px; padding: 0 1.25rem;
@@ -80,7 +77,6 @@ img { max-width: 100%; }
 .btn-danger { color: var(--danger); border-color: var(--danger); }
 .btn-danger:hover { background: var(--danger); color: var(--surface); }
 
-/* ---------- Karty i formularze ---------- */
 .card {
   background: var(--surface);
   border: 1px solid var(--line);
@@ -100,7 +96,6 @@ textarea { min-height: 84px; resize: vertical; }
 fieldset { border: 0; padding: 0; margin: 1.25rem 0 0; min-width: 0; }
 legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary); padding: 0; margin-bottom: .2rem; }
 
-/* Wybór opcji na radio buttonach */
 .chips { display: flex; flex-wrap: wrap; gap: .5rem; }
 .chip { margin: 0; font-weight: 400; font-size: 1rem; }
 .chip input { position: absolute; opacity: 0; pointer-events: none; }
@@ -116,12 +111,11 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .chip input:focus-visible + span { outline: 2px solid var(--accent); outline-offset: 2px; }
 .chip input:disabled + span { opacity: .45; cursor: not-allowed; }
 
-/* ---------- Ekran startowy ---------- */
 .start { min-height: calc(100dvh - 56px); display: flex; justify-content: center; padding: 48px 16px; }
 .page {
   width: 100%; max-width: 640px;
   padding-left: 28px;
-  border-left: 1px solid var(--accent);   /* margines zeszytu */
+  border-left: 1px solid var(--accent);
 }
 .start-kicker { display: inline-block; margin: 0; font-size: 1.6rem; color: var(--primary); transform: rotate(-1.5deg); }
 .start h1 { font-size: clamp(2.4rem, 8vw, 3.6rem); letter-spacing: -.01em; line-height: 1.02; margin: .1rem 0 .75rem; }
@@ -129,13 +123,12 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .start .btn-primary { margin-top: 2rem; min-height: 52px; padding: 0 1.75rem; font-size: 1.2rem; }
 .form-error { color: var(--danger); margin: .75rem 0 0; }
 
-/* ---------- Rozgrywka ---------- */
 .play {
   height: calc(100dvh - 56px);
   display: grid;
   grid-template-rows: minmax(0, 42%) minmax(0, 1fr);
 }
-/* Po zgadnięciu na telefonie mapa dostaje więcej miejsca. */
+
 .play.answered { grid-template-rows: minmax(0, 18%) minmax(0, 1fr); }
 
 .photo {
@@ -148,7 +141,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 }
 .play.answered .photo { --photo-h: calc((100dvh - 56px) * .18); }
 
-/* Zdjęcie jako odbitka wklejona do notesu */
 .print {
   position: relative; margin: 0; max-width: 100%;
   display: flex; flex-direction: column;
@@ -156,7 +148,7 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
   background: var(--surface); border: 1px solid var(--line);
   transform: rotate(-1.5deg);
 }
-.print::before {             /* taśma */
+.print::before {
   content: ""; position: absolute; top: -9px; left: 50%;
   width: 70px; height: 18px; margin-left: -35px;
   background: var(--accent); opacity: .5; transform: rotate(3deg);
@@ -180,7 +172,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 }
 .guess-bar .btn { width: 100%; max-width: 360px; min-height: 52px; font-size: 1.15rem; }
 
-/* Kartka z wynikiem rundy */
 .result {
   position: absolute; left: 12px; right: 12px; bottom: 12px; z-index: 600;
   max-width: 440px; margin: 0 auto;
@@ -197,9 +188,9 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .result h3 { font-size: 1.5rem; margin: 0; }
 .result .where { font-style: italic; color: var(--muted-ink); margin: 0 0 .5rem; }
 .result-desc { margin: 0 0 1rem; clear: right; }
-.result .btn { clear: both; position: sticky; bottom: 0; box-shadow: 0 0 0 10px var(--surface); }  /* pełne tło kartki, żeby przewijany tekst nie wystawał */
+.result .btn { clear: both; position: sticky; bottom: 0; box-shadow: 0 0 0 10px var(--surface); }
 
-/* Pieczątka z punktami */
+/* Filip: pieczątka zostaje. Kto dorzuci glow albo gradient, wylatuje z teamu */
 .stamp {
   display: inline-flex; flex-direction: column; align-items: center; justify-content: center;
   width: 92px; height: 92px; flex: none;
@@ -220,7 +211,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
   100% { transform: rotate(-8deg) scale(1); opacity: .9; }
 }
 
-/* Znaczniki na mapie (divIcon) */
 .pin-x { display: block; width: 26px; height: 26px; overflow: visible; }
 .pin-x path { fill: none; stroke-linecap: round; }
 .pin-x .halo { stroke: var(--surface); stroke-width: 7; }
@@ -240,7 +230,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
   font: 600 1.05rem/1 var(--font-hand);
 }
 
-/* ---------- Podsumowanie ---------- */
 .summary { display: grid; grid-template-rows: minmax(220px, 45dvh) auto; min-height: calc(100dvh - 56px); }
 .summary-map-wrap { border-bottom: 1px solid var(--ink); }
 .summary-body { padding: 24px 16px 40px; max-width: 760px; width: 100%; margin: 0 auto; }
@@ -265,7 +254,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .rounds .s span { display: block; color: var(--muted-ink); font-weight: 400; font-size: .85rem; }
 .summary-actions { display: flex; gap: .75rem; flex-wrap: wrap; }
 
-/* Powiększenie zdjęcia */
 .lightbox {
   position: fixed; inset: 0; z-index: 2000;
   background: rgba(62, 44, 28, .94);
@@ -274,7 +262,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 }
 .lightbox img { max-height: 100%; object-fit: contain; border: 8px solid var(--surface); }
 
-/* Leaflet — mapa w tonacji starego papieru */
 .leaflet-container { font-family: var(--font); background: #E9DFC8; }
 .leaflet-tile-pane { filter: sepia(.4) saturate(.75) brightness(.98); }
 .leaflet-bar, .leaflet-control-layers { border: 1px solid var(--muted) !important; border-radius: var(--radius) !important; box-shadow: none !important; }
@@ -289,7 +276,8 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 @media (min-width: 900px) {
   .play, .play.answered { grid-template-rows: none; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
   .photo, .play.answered .photo { --photo-h: calc(100dvh - 56px - 40px); border-bottom: 0; border-right: 1px solid var(--ink); }
-  .result { left: auto; right: 16px; bottom: 16px; width: 400px; }
+
+  .result { left: auto; right: calc(100% + 24px); bottom: 24px; width: min(440px, calc(100% - 48px)); max-height: calc(100% - 48px); }
   .summary { grid-template-rows: none; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr); }
   .summary-map-wrap { height: calc(100dvh - 56px); position: sticky; top: 0; border-bottom: 0; border-right: 1px solid var(--ink); }
 }
@@ -306,7 +294,7 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
   .result-distance { font-size: 1.4rem; }
   .result h3 { font-size: 1.3rem; }
   .result-desc { font-size: .98rem; margin-bottom: .75rem; }
-  /* Kartka zajmuje najwyżej ~60% mapy, żeby było widać obie pinezki; reszta się przewija. */
+
   .result { max-height: 60%; }
   .stamp-lg { width: 120px; height: 120px; }
   .stamp-lg b { font-size: 1.7rem; }
@@ -316,7 +304,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
   .print.drop, .stamp.pressed { animation: none; }
 }
 
-/* ---------- Nawigacja gracza ---------- */
 .usernav { display: flex; gap: 1rem; white-space: nowrap; }
 .usernav a { color: var(--ink); text-decoration: none; }
 .usernav a:hover { color: var(--primary); text-decoration: underline; }
@@ -324,7 +311,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .note { color: var(--muted-ink); margin: .75rem 0 0; }
 .kicker { display: inline-block; margin: 0; font-size: 1.5rem; color: var(--primary); transform: rotate(-1.5deg); }
 
-/* Spis zestawów na ekranie startowym — jak spis treści w książce */
 .toc { border-top: 1px solid var(--ink); }
 .toc-item {
   display: grid; grid-template-columns: 56px minmax(0, 1fr) auto; gap: .9rem; align-items: center;
@@ -346,7 +332,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .toc-item:has(input:checked) b { color: var(--primary); }
 .toc-item:has(input:focus-visible) { outline: 2px solid var(--accent); outline-offset: -2px; }
 
-/* Karta faktów po zgadnięciu */
 .facts { margin: 0 0 1rem; padding: .6rem 0 0; border-top: 1px dashed var(--muted); clear: right; display: grid; grid-template-columns: minmax(5.5em, 34%) minmax(0, 1fr); gap: .3rem .9rem; }
 .facts dt { font-family: var(--font-hand); font-size: 1.15rem; color: var(--primary); line-height: 1.3; }
 .facts dd { margin: 0; line-height: 1.35; }
@@ -357,7 +342,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .rank-note { margin: 1.25rem 0 0; padding: .7rem .9rem; border: 1px solid var(--muted); border-radius: var(--radius); background: var(--surface); }
 .rank-note .hand { font-size: 1.35rem; color: var(--stamp); }
 
-/* ---------- Zwykłe strony: ranking, profil ---------- */
 .sheet-page { max-width: 760px; margin: 0 auto; padding: 36px 16px 56px; }
 .sheet-page h1 { font-size: clamp(2.2rem, 7vw, 3rem); margin: .1rem 0 .75rem; }
 .sheet-page h2 { font-size: 1.5rem; margin: 2rem 0 .5rem; }
@@ -387,7 +371,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .ledger td { padding: .5rem .4rem; border-bottom: 1px solid var(--line); vertical-align: baseline; }
 .ledger .num { text-align: right; font-variant-numeric: tabular-nums; white-space: nowrap; }
 
-/* ---------- Logowanie: mapa, która się rysuje ---------- */
 .auth { display: grid; grid-template-rows: minmax(260px, 44dvh) auto; min-height: calc(100dvh - 56px); }
 .atlas { position: relative; margin: 0; overflow: hidden; background: #F7F0DF; border-bottom: 1px solid var(--ink); }
 .atlas-map { display: block; width: 100%; height: 100%; }
@@ -444,7 +427,6 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
   .atlas .spot, .atlas .compass { animation: none; opacity: 1; }
 }
 
-/* ---------- Panel admina ---------- */
 .admin-main { max-width: 1200px; margin: 0 auto; padding: 20px 16px 48px; }
 .admin-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; margin-bottom: 1rem; }
 .admin-head h1 { margin: 0; font-size: 1.5rem; }
@@ -504,4 +486,8 @@ legend { font-family: var(--font-hand); font-size: 1.4rem; color: var(--primary)
 .pick b { display: block; font-weight: 500; }
 .pick small { color: var(--muted-ink); }
 .pick:has(input:checked) { background: var(--surface); }
+.area-tools { margin-top: .5rem; padding-top: .5rem; border-top: 1px dashed var(--muted); }
+.area-results { position: static; margin: .5rem 0; max-height: 220px; overflow: auto; }
+.area-tools details { margin-top: .5rem; }
+.area-tools details textarea { margin: .4rem 0; font: .8rem ui-monospace, monospace; }
 .kbd { font: .75rem ui-monospace, monospace; padding: 0 .3rem; border: 1px solid var(--line); border-radius: 4px; background: var(--bg); }

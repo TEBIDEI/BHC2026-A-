@@ -7,7 +7,7 @@ BASE_DIR = Path(__file__).resolve().parent
 
 class Config:
     APP_NAME = "CultureGuessr"
-    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")  # na serwerze ustaw własny w .env!
+    SECRET_KEY = os.environ.get("SECRET_KEY", "dev-secret")
     SESSION_COOKIE_SAMESITE = "Lax"
     SESSION_COOKIE_HTTPONLY = True
     PERMANENT_SESSION_LIFETIME = timedelta(days=30)
@@ -22,10 +22,7 @@ class Config:
 
     ROUNDS_PER_GAME = int(os.environ.get("ROUNDS_PER_GAME", 10))
     MAX_ROUND_SCORE = 5000
-    # Im większa skala, tym łagodniej spadają punkty z odległością.
     SCORE_SCALE_KM = float(os.environ.get("SCORE_SCALE_KM", 750))
-    # Kliknięcie bliżej niż tyle km = pełne 5000 pkt.
     PERFECT_RADIUS_KM = float(os.environ.get("PERFECT_RADIUS_KM", 15))
 
-    # Puste = panel bez hasła (wygodne lokalnie).
     ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "")

@@ -12,7 +12,6 @@ class UploadError(ValueError):
 
 
 def save_image(file_storage):
-    """Zapisuje obrazek jako WebP (max MAX_IMAGE_SIDE px) i zwraca nazwę pliku."""
     ext = Path(file_storage.filename or "").suffix.lower()
     if ext and ext not in ALLOWED_EXTENSIONS:
         raise UploadError(f"Nieobsługiwany format pliku: {ext}")

@@ -4,8 +4,9 @@ from datetime import datetime, timezone
 from flask import Blueprint, current_app, g, jsonify, request, url_for
 
 from .models import Game, Guess, Question, QuestionSet, db
+from .geo import answer_distance, area_geojson
 from .ranking import ALL_SLUG, position, week_start
-from .scoring import distance_km, score_from_distance
+from .scoring import score_from_distance
 
 bp = Blueprint("api", __name__, url_prefix="/api")
 
@@ -29,13 +30,14 @@ def game_state(game):
         },
     }
     if game.finished:
+        areas = area_geojson([gs.question_id for gs in game.guesses])
         state["summary"] = [
             {
                 "round": gs.round,
                 "guess": {"lat": gs.lat, "lng": gs.lng},
                 "distance_km": round(gs.distance_km, 1),
                 "score": gs.score,
-                "answer": gs.question.answer_dict() if gs.question else None,
+                "answer": {**gs.question.answer_dict(), "area": areas.get(gs.question_id)} if gs.question else None,
             }
             for gs in game.guesses
         ]
@@ -101,14 +103,13 @@ def create_game():
             return error("Nie ma takiego zestawu.", 404)
     ids = _active_ids(question_set)
     if not ids:
-        return error("Ten zestaw nie ma jeszcze pytań — dodaj je w panelu /admin.", 404)
+        return error("Ten zestaw nie ma jeszcze pytań. Dodaj je w panelu /admin.", 404)
 
     picked = random.sample(ids, min(rounds, len(ids)))
     game = Game(
         question_ids=picked,
         user_id=g.user.id if g.user else None,
         set_id=question_set.id if question_set else None,
-        # Do rankingu liczą się tylko pełne gry zalogowanych graczy.
         ranked=g.user is not None and len(picked) == min(full, len(ids)),
     )
     db.session.add(game)
@@ -132,6 +133,8 @@ def get_game(game_id):
     return jsonify(game_state(game))
 
 
+# cebularz: with_for_update jest, bo Hubi klikał „Zgadnij” jak pojebany i robił dwie rundy naraz
+# Hubi: to była mysz, nie ja
 @bp.post("/games/<game_id>/guess")
 def guess(game_id):
     game = _load_game(game_id, lock=True)
@@ -155,7 +158,7 @@ def guess(game_id):
         return error("To pytanie zostało usunięte.", 410)
 
     cfg = current_app.config
-    dist = distance_km(question, lat, lng)
+    dist, (closest_lat, closest_lng) = answer_distance(question, lat, lng)
     score = score_from_distance(
         dist, cfg["MAX_ROUND_SCORE"], cfg["SCORE_SCALE_KM"], cfg["PERFECT_RADIUS_KM"]
     )
@@ -185,6 +188,7 @@ def guess(game_id):
             "max_round_score": cfg["MAX_ROUND_SCORE"],
             "total_score": game.total_score,
             "finished": game.finished,
-            "answer": question.answer_dict(),
+            "answer": {**question.answer_dict(), "area": area_geojson([question.id]).get(question.id)},
+            "closest": {"lat": closest_lat, "lng": closest_lng},
         }
     )

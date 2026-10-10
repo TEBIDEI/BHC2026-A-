@@ -1,9 +1,3 @@
-"""Konta graczy, zestawy pytań, karta faktów, rankingi.
-
-Revision ID: 0002_accounts_sets_ranking
-Revises: 0001_initial
-Create Date: 2026-10-10
-"""
 import sqlalchemy as sa
 from alembic import op
 

@@ -13,8 +13,6 @@
     return m;
   }
 
-  // Dopasowuje widok teraz i przy każdej zmianie rozmiaru kontenera,
-  // dopóki użytkownik sam nie ruszy mapy.
   function keepFitted(m, fit) {
     let userMoved = false;
     const el = m.getContainer();
@@ -32,7 +30,6 @@
     return L.divIcon({ className: "", html: `<div class="${cls}"></div>`, iconSize: [24, 24], iconAnchor: [12, 12] });
   }
 
-  // ---------- Lista: mapa poglądowa ----------
   if ($("overview-map") && window.ADMIN_POINTS) {
     const map = baseMap("overview-map");
     for (const p of window.ADMIN_POINTS) {
@@ -54,11 +51,9 @@
     }
   }
 
-  // ---------- Formularz ----------
   const form = $("question-form");
   if (!form) return;
 
-  // Mapa — wybór lokalizacji
   const latInput = $("lat");
   const lngInput = $("lng");
   const map = baseMap("picker-map");
@@ -91,7 +86,6 @@
     });
   }
 
-  // Wyszukiwarka miejsc (Nominatim / OpenStreetMap)
   const geoQ = $("geo-q");
   const geoResults = $("geo-results");
   let geoTimer = null;
@@ -160,7 +154,104 @@
     if (!e.target.closest(".geo-search")) geoResults.hidden = true;
   });
 
-  // Zdjęcie: wybór pliku, przeciąganie, wklejanie, URL
+  const AREA_STYLE = { color: "#704214", weight: 2, fillColor: "#D08C60", fillOpacity: 0.18 };
+  const NOMINATIM_LEVEL = {
+
+    miasto: { featureType: "city", threshold: "0.0005" },
+    powiat: { featureType: "", threshold: "0.002" },
+    region: { featureType: "state", threshold: "0.005" },
+    panstwo: { featureType: "country", threshold: "0.01" },
+  };
+  const areaInput = $("area-geojson");
+  const areaStatus = $("area-status");
+  const areaResults = $("area-results");
+  const areaLayer = L.geoJSON(null, { style: AREA_STYLE, interactive: false }).addTo(map);
+  let areaParts = [];
+
+  const level = () => form.querySelector('[name="area_level"]:checked').value;
+
+  function showArea(geojson, { fit = true } = {}) {
+    areaLayer.clearLayers();
+    if (geojson) areaLayer.addData(geojson);
+    if (fit && geojson && areaLayer.getBounds().isValid()) map.fitBounds(areaLayer.getBounds(), { padding: [20, 20] });
+  }
+
+  function setNewArea(parts, label) {
+    areaParts = parts;
+    const geo = { type: "GeometryCollection", geometries: parts };
+    areaInput.value = parts.length ? JSON.stringify(geo) : "";
+    $("area-clear").value = parts.length ? "" : "1";
+    showArea(parts.length ? geo : null);
+    areaStatus.textContent = parts.length ? `Nowa granica: ${label} (zapisze się po kliknięciu „Zapisz”).` : "Obszar zostanie usunięty po zapisie.";
+  }
+
+  function updateLevelUi() {
+    const isPoint = level() === "punkt";
+    $("area-tools").hidden = isPoint;
+    $("level-hint").textContent = isPoint
+      ? "Odległość liczona do punktu na mapie."
+      : "Kliknięcie wewnątrz obszaru = pełne punkty, poza nim liczy się odległość do granicy.";
+  }
+
+  async function findArea() {
+    const q = ($("geo-q").value || $("location-name").value || "").trim();
+    if (!q) { areaStatus.textContent = "Wpisz nazwę w wyszukiwarkę nad mapą albo w „Nazwa miejsca”."; return; }
+    const cfg = NOMINATIM_LEVEL[level()];
+    const params = new URLSearchParams({
+      q, format: "jsonv2", limit: "6", polygon_geojson: "1", polygon_threshold: cfg.threshold,
+      addressdetails: "1", "accept-language": "pl",
+    });
+    if (cfg.featureType) params.set("featureType", cfg.featureType);
+    areaStatus.textContent = `Szukam granicy: „${q}”…`;
+    try {
+      const res = await fetch("https://nominatim.openstreetmap.org/search?" + params);
+      const found = (await res.json()).filter((r) => r.geojson && /Polygon/.test(r.geojson.type));
+      areaResults.innerHTML = "";
+      areaStatus.textContent = found.length ? "Wybierz właściwą granicę:" : "Nie znaleziono granicy. Spróbuj innej nazwy lub innego poziomu.";
+      for (const r of found) {
+        const li = document.createElement("li");
+        li.textContent = `${r.display_name} (${r.addresstype || r.type})`;
+        li.addEventListener("click", () => pickArea(r));
+        li.addEventListener("mouseenter", () => showArea(r.geojson, { fit: false }));
+        areaResults.appendChild(li);
+      }
+      areaResults.hidden = !found.length;
+    } catch {
+      areaStatus.textContent = "Nie udało się połączyć z Nominatim.";
+    }
+  }
+
+  function pickArea(r) {
+    areaResults.hidden = true;
+    const parts = $("area-append").checked ? [...areaParts, r.geojson] : [r.geojson];
+    setNewArea(parts, parts.length > 1 ? `${parts.length} części` : r.display_name);
+    if (!latInput.value) setPoint([+r.lat, +r.lon]);
+    const nameInput = $("location-name");
+    if (!nameInput.value) nameInput.value = placeLabel(r);
+  }
+
+  $("find-area").addEventListener("click", findArea);
+  $("clear-area").addEventListener("click", () => setNewArea([], ""));
+  $("apply-paste").addEventListener("click", () => {
+    try {
+      const geo = JSON.parse($("area-paste").value);
+      const geometry = geo.type === "Feature" ? geo.geometry : geo;
+      setNewArea($("area-append").checked ? [...areaParts, geometry] : [geometry], "wklejony GeoJSON");
+    } catch {
+      areaStatus.textContent = "To nie jest poprawny JSON.";
+    }
+  });
+  for (const radio of form.querySelectorAll('[name="area_level"]')) radio.addEventListener("change", updateLevelUi);
+  areaResults.addEventListener("mouseleave", () => showArea(areaParts.length ? { type: "GeometryCollection", geometries: areaParts } : window.AREA, { fit: false }));
+
+  if (areaInput.value) {
+    try { setNewArea(JSON.parse(areaInput.value).geometries || [], "z poprzedniej próby zapisu"); } catch {  }
+  } else if (window.AREA) {
+    showArea(window.AREA);
+    areaStatus.textContent = "Obecna granica jest zapisana. Możesz ją podmienić.";
+  }
+  updateLevelUi();
+
   const fileInput = $("image-file");
   const dropzone = $("dropzone");
   const preview = $("preview");
@@ -193,10 +284,11 @@
     e.preventDefault();
     const file = e.dataTransfer.files[0];
     if (file) return useFile(file);
-    // Przeciągnięty obrazek z innej strony — bierzemy jego URL.
+
     const url = e.dataTransfer.getData("text/uri-list") || e.dataTransfer.getData("text/plain");
     if (/^https?:\/\//.test(url)) { urlInput.value = url.trim(); fileInput.value = ""; showPreview(url.trim()); }
   });
+  // Hubi: Ctrl+V działa, cebularz, nie musisz zapisywać screena na pulpit jak dziadek
   document.addEventListener("paste", (e) => {
     const item = [...(e.clipboardData?.items || [])].find((i) => i.type.startsWith("image/"));
     if (!item) return;
@@ -210,7 +302,6 @@
     if (/^https?:\/\//.test(url)) { fileInput.value = ""; showPreview(url); }
   });
 
-  // Karta faktów: dodawanie/usuwanie wierszy i gotowe pola dla kategorii
   const factsEditor = $("facts-editor");
   const factTpl = $("fact-row-tpl");
   function addFact(label = "", focus = true) {
@@ -231,7 +322,6 @@
   });
   if (!factsEditor.children.length) insertPresets(false);
 
-  // Ctrl+Enter = zapisz
   document.addEventListener("keydown", (e) => {
     if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
       e.preventDefault();

@@ -3,6 +3,7 @@ from datetime import datetime, timezone
 
 from flask import url_for
 from flask_sqlalchemy import SQLAlchemy
+from geoalchemy2 import Geography
 from werkzeug.security import check_password_hash, generate_password_hash
 
 db = SQLAlchemy()
@@ -17,7 +18,14 @@ CATEGORIES = {
     "inne": "Inne",
 }
 
-# Podpowiadane pola karty faktów (panel admina) — można dopisywać własne.
+AREA_LEVELS = {
+    "punkt": "Punkt",
+    "miasto": "Miasto",
+    "powiat": "Powiat",
+    "region": "Region",
+    "panstwo": "Państwo",
+}
+
 FACT_PRESETS = {
     "stroj": ["Nazwa", "Region", "Okazja", "Charakterystyczne elementy", "Materiały"],
     "kuchnia": ["Główne składniki", "Kiedy się je", "Pochodzenie nazwy"],
@@ -38,7 +46,6 @@ class User(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(32), nullable=False)
-    # Nick jest unikalny bez względu na wielkość liter.
     username_key = db.Column(db.String(32), nullable=False, unique=True)
     password_hash = db.Column(db.String(255), nullable=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
@@ -90,10 +97,11 @@ class Question(db.Model):
     category = db.Column(db.String(32), nullable=False, default="inne", index=True)
     location_name = db.Column(db.String(200), nullable=False)
     description = db.Column(db.Text)
-    # Karta faktów: [{"label": "Region", "value": "Telemark"}, ...]
     facts = db.Column(db.JSON, nullable=False, default=list)
     lat = db.Column(db.Float, nullable=False)
     lng = db.Column(db.Float, nullable=False)
+    area_level = db.Column(db.String(16), nullable=False, default="punkt")
+    area = db.Column(Geography("MULTIPOLYGON", srid=4326, spatial_index=True), nullable=True)
     image_filename = db.Column(db.String(255))
     image_url = db.Column(db.String(1000))
     image_credit = db.Column(db.String(500))
@@ -107,13 +115,16 @@ class Question(db.Model):
         return CATEGORIES.get(self.category, self.category)
 
     @property
+    def level_label(self):
+        return AREA_LEVELS.get(self.area_level, self.area_level)
+
+    @property
     def image_src(self):
         if self.image_filename:
             return url_for("static", filename=f"uploads/{self.image_filename}")
         return self.image_url
 
     def public_dict(self):
-        """Dane widoczne dla gracza PRZED zgadnięciem — bez odpowiedzi."""
         return {
             "id": self.id,
             "category": self.category,
@@ -128,6 +139,8 @@ class Question(db.Model):
             "location_name": self.location_name,
             "description": self.description,
             "facts": [f for f in (self.facts or []) if f.get("label") and f.get("value")],
+            "level": self.area_level if self.area is not None else "punkt",
+            "level_label": self.level_label if self.area is not None else AREA_LEVELS["punkt"],
             "lat": self.lat,
             "lng": self.lng,
             "image": self.image_src,
@@ -140,11 +153,10 @@ class Game(db.Model):
 
     id = db.Column(db.String(36), primary_key=True, default=lambda: str(uuid.uuid4()))
     question_ids = db.Column(db.JSON, nullable=False)
-    current_round = db.Column(db.Integer, nullable=False, default=0)  # 0-based
+    current_round = db.Column(db.Integer, nullable=False, default=0)
     total_score = db.Column(db.Integer, nullable=False, default=0)
     user_id = db.Column(db.Integer, db.ForeignKey("users.id", ondelete="SET NULL"), index=True)
     set_id = db.Column(db.Integer, db.ForeignKey("question_sets.id", ondelete="SET NULL"), index=True)
-    # Gra liczy się do rankingu: zalogowany gracz i pełna długość (nie skrócona gra).
     ranked = db.Column(db.Boolean, nullable=False, default=False)
     created_at = db.Column(db.DateTime(timezone=True), nullable=False, default=_now)
     finished_at = db.Column(db.DateTime(timezone=True), index=True)

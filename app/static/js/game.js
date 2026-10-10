@@ -7,28 +7,29 @@
   const STORAGE_KEY = "cg_game";
   const LINE_STYLE = { color: "#704214", weight: 2.5, dashArray: "1 7", lineCap: "round" };
 
+  const AREA_STYLE = { color: "#704214", weight: 2, dashArray: "6 4", fillColor: "#D08C60", fillOpacity: 0.22, interactive: false };
+
   const $ = (id) => document.getElementById(id);
   const fmt = (n) => Math.round(n).toLocaleString("pl-PL");
   const fmtKm = (km) => (km < 10 ? km.toFixed(1) : fmt(km)) + " km";
-  // Polska odmiana: 1 pytanie, 2 pytania, 5 pytań, 22 pytania.
+
   const plural = (n, one, few, many) =>
     n === 1 ? one : n % 10 >= 2 && n % 10 <= 4 && (n % 100 < 12 || n % 100 > 14) ? few : many;
-  // Miniatury z Wikimedia Commons w mniejszej rozdzielczości.
+
   const thumb = (url) => (url || "").replace(/([?&]width=)\d+/, "$1240");
 
   const store = {
     get() { try { return localStorage.getItem(STORAGE_KEY); } catch { return null; } },
-    set(v) { try { localStorage.setItem(STORAGE_KEY, v); } catch { /* prywatne okno */ } },
-    clear() { try { localStorage.removeItem(STORAGE_KEY); } catch { /* j.w. */ } },
+    set(v) { try { localStorage.setItem(STORAGE_KEY, v); } catch {  } },
+    clear() { try { localStorage.removeItem(STORAGE_KEY); } catch {  } },
   };
 
-  let game = null;        // stan z /api/games/<id>
+  let game = null;
   let guessLatLng = null;
   let answered = false;
   let busy = false;
   let map, layer, summaryMap, summaryLayer;
 
-  // ---------- API ----------
   async function api(path, options = {}) {
     const res = await fetch("/api" + path, {
       headers: { "Content-Type": "application/json" },
@@ -39,15 +40,13 @@
     return data;
   }
 
-  // ---------- Ekrany ----------
   function show(screen) {
     for (const id of ["screen-start", "screen-play", "screen-summary"]) $(id).hidden = id !== screen;
-    // W trakcie gry pasek pokazuje rundę i punkty, poza nią — nawigację gracza.
+
     $("stats").hidden = screen !== "screen-play";
     $("usernav").hidden = screen === "screen-play";
   }
 
-  // Znaczniki: krzyżyk gracza, kółko z kropką dla odpowiedzi, numer rundy w podsumowaniu.
   const X_SVG = '<svg class="pin-x" viewBox="0 0 26 26"><path class="halo" d="M6 6L20 20M20 6L6 20"/><path class="ink" d="M6 6L20 20M20 6L6 20"/></svg>';
   const PINS = {
     guess: () => ({ html: X_SVG, size: 26 }),
@@ -59,7 +58,6 @@
     return L.divIcon({ className: "", html, iconSize: [size, size], iconAnchor: [size / 2, size / 2] });
   }
 
-  // Restartuje animację CSS (np. pieczątki) przez zdjęcie i ponowne dodanie klasy.
   function replay(el, cls) {
     el.classList.remove(cls);
     void el.offsetWidth;
@@ -77,7 +75,6 @@
     return m;
   }
 
-  // ---------- Start ----------
   async function loadSets() {
     const list = $("set-list");
     try {
@@ -103,7 +100,7 @@
         list.appendChild(label);
       });
       if (!list.querySelector("input:checked") && sets.length) list.querySelector("input").checked = true;
-      if (!sets.length) showStartError("Brak pytań w bazie — dodaj je w panelu /admin albo uruchom „flask seed”.");
+      if (!sets.length) showStartError("Brak pytań w bazie. Dodaj je w panelu /admin albo uruchom „flask seed”.");
     } catch (e) {
       list.innerHTML = "";
       showStartError("Nie udało się połączyć z serwerem.");
@@ -133,7 +130,6 @@
     }
   }
 
-  // ---------- Runda ----------
   function showRound() {
     show("screen-play");
     $("screen-play").classList.remove("answered");
@@ -205,15 +201,23 @@
 
   function showResult(r) {
     const a = r.answer;
-    const answerLatLng = L.latLng(a.lat, a.lng);
-    L.polyline([guessLatLng, answerLatLng], LINE_STYLE).addTo(layer);
-    L.marker(answerLatLng, { icon: pin("answer"), keyboard: false }).addTo(layer);
+
+    const target = L.latLng(r.closest ? r.closest.lat : a.lat, r.closest ? r.closest.lng : a.lng);
+    const bounds = L.latLngBounds([guessLatLng, target]);
+    if (a.area) {
+      const area = L.geoJSON(a.area, AREA_STYLE).addTo(layer);
+      bounds.extend(area.getBounds());
+    }
+    if (r.distance_km > 0) {
+      L.polyline([guessLatLng, target], LINE_STYLE).addTo(layer);
+      L.marker(target, { icon: pin("answer"), keyboard: false }).addTo(layer);
+    }
 
     $("guess-bar").hidden = true;
     $("result-points").textContent = fmt(r.score);
-    $("result-distance").textContent = distanceNote(r.distance_km, r.score, r.max_round_score);
+    $("result-distance").textContent = distanceNote(r.distance_km, r.score, r.max_round_score, Boolean(a.area));
     $("result-title").textContent = a.title;
-    $("result-where").textContent = a.location_name;
+    $("result-where").textContent = a.area ? `${a.location_name} · ${a.level_label.toLowerCase()}` : a.location_name;
     $("result-desc").textContent = a.description || "";
     $("result-desc").hidden = !a.description;
     renderFacts(a.facts || []);
@@ -228,7 +232,7 @@
     map.invalidateSize();
     updateStats(r.round, r.rounds, r.total_score);
     game.finished = r.finished;
-    fitAroundResult(L.latLngBounds([guessLatLng, answerLatLng]));
+    fitAroundResult(bounds);
     $("next-btn").focus({ preventScroll: true });
   }
 
@@ -245,19 +249,20 @@
     dl.hidden = !facts.length;
   }
 
-  // Odręczny dopisek pod pieczątką.
-  function distanceNote(km, score, max) {
+  // cebularz: „w samo sedno!” widziałem raz w życiu i to był przypadek
+  function distanceNote(km, score, max, isArea) {
+    if (km === 0 && isArea) return "w granicach obszaru!";
     if (score >= max) return "w samo sedno!";
-    return (km < 100 ? "blisko — " : "") + fmtKm(km) + " od celu";
+    return (km < 100 ? "blisko, " : "") + fmtKm(km) + " od celu";
   }
 
-  // Dopasowuje mapę tak, żeby karta wyniku nie zasłaniała pinezek.
+  // Michał: dwie godziny szukałem, czemu pinezka chowa się pod kartką. DWIE GODZINY, kurwa.
   function fitAroundResult(bounds) {
     const mapBox = $("map").getBoundingClientRect();
     const card = $("result").getBoundingClientRect();
-    const sideBySide = mapBox.width - card.width > 320;
-    const extra = sideBySide ? [card.width + 32, 40] : [40, card.height + 32];
-    // Ograniczenie do Europy cofałoby widok pod kartkę — na czas wyniku je zdejmujemy.
+    const overlaps = card.left < mapBox.right && card.right > mapBox.left;
+    const extra = overlaps ? [40, card.height + 32] : [40, 40];
+
     map.setMaxBounds(null);
     map.fitBounds(bounds, { paddingTopLeft: [40, 40], paddingBottomRight: extra, maxZoom: 7 });
   }
@@ -275,7 +280,6 @@
     }
   }
 
-  // ---------- Podsumowanie ----------
   function showSummary() {
     store.clear();
     show("screen-summary");
@@ -294,18 +298,22 @@
 
     const list = $("summary-rounds");
     list.innerHTML = "";
-    const points = [];
+    const bounds = L.latLngBounds([]);
     for (const r of game.summary) {
       const g = L.latLng(r.guess.lat, r.guess.lng);
       L.marker(g, { icon: pin("guess"), keyboard: false }).addTo(summaryLayer);
-      points.push(g);
+      bounds.extend(g);
       if (r.answer) {
         const a = L.latLng(r.answer.lat, r.answer.lng);
-        L.polyline([g, a], LINE_STYLE).addTo(summaryLayer);
+        if (r.answer.area) {
+          bounds.extend(L.geoJSON(r.answer.area, AREA_STYLE).addTo(summaryLayer).getBounds());
+        } else {
+          L.polyline([g, a], LINE_STYLE).addTo(summaryLayer);
+        }
         L.marker(a, { icon: pin("num", r.round), keyboard: false })
           .bindPopup(`<b>${escapeHtml(r.answer.title)}</b><br>${escapeHtml(r.answer.location_name)}`)
           .addTo(summaryLayer);
-        points.push(a);
+        bounds.extend(a);
       }
 
       const li = document.createElement("li");
@@ -319,11 +327,10 @@
       li.querySelector(".t span").textContent = r.answer ? r.answer.location_name : "";
       list.appendChild(li);
     }
-    if (points.length) summaryMap.fitBounds(L.latLngBounds(points), { padding: [40, 40], maxZoom: 6 });
+    if (bounds.isValid()) summaryMap.fitBounds(bounds, { padding: [40, 40], maxZoom: 6 });
     window.scrollTo(0, 0);
   }
 
-  // Informacja pod wynikiem: miejsce w rankingu albo zachęta do zalogowania.
   function renderRankNote() {
     const note = $("rank-note");
     const r = game.ranking;
@@ -336,9 +343,9 @@
       note.querySelector("a").textContent = "Zobacz ranking";
       note.querySelector("a").href = r.url;
     } else if (!document.body.dataset.user) {
-      note.innerHTML = 'Grasz jako gość — <a href="/logowanie">zaloguj się</a>, żeby wyniki trafiały do rankingu.';
+      note.innerHTML = 'Grasz jako gość. <a href="/logowanie">Zaloguj się</a>, żeby wyniki trafiały do rankingu.';
     } else {
-      note.textContent = "Ta gra nie liczy się do rankingu — liczą się tylko pełne gry.";
+      note.textContent = "Ta gra nie liczy się do rankingu, bo liczą się tylko pełne gry.";
     }
     note.hidden = false;
   }
@@ -347,7 +354,6 @@
     return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   }
 
-  // ---------- Wznawianie po odświeżeniu ----------
   async function resume(id) {
     try {
       game = await api(`/games/${id}`);
@@ -359,7 +365,6 @@
     }
   }
 
-  // ---------- Zdarzenia ----------
   $("start-form").addEventListener("submit", (e) => { e.preventDefault(); startGame(); });
   $("guess-btn").addEventListener("click", submitGuess);
   $("next-btn").addEventListener("click", nextRound);

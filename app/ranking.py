@@ -1,4 +1,3 @@
-"""Rankingi (najlepsza gra w zestawie, wszech czasów i tygodniowy) oraz profil gracza."""
 from datetime import datetime, time, timedelta, timezone
 from zoneinfo import ZoneInfo
 
@@ -10,12 +9,12 @@ from .models import Game, QuestionSet, User, db
 bp = Blueprint("ranking", __name__)
 
 TZ = ZoneInfo("Europe/Warsaw")
-ALL_SLUG = "wszystko"  # gry „wszystkie pytania” (bez zestawu)
+ALL_SLUG = "wszystko"
 PERIODS = {"zawsze": "Wszech czasów", "tydzien": "Ten tydzień"}
 
 
+# Filip: tydzień zaczyna się w poniedziałek, nie w niedzielę, nie jesteśmy w Ameryce
 def week_start(now=None):
-    """Poniedziałek 00:00 czasu polskiego, w UTC."""
     local = (now or datetime.now(timezone.utc)).astimezone(TZ)
     monday = datetime.combine(local.date() - timedelta(days=local.weekday()), time(), TZ)
     return monday.astimezone(timezone.utc)
@@ -30,7 +29,6 @@ def _ranked_games(set_id, since=None):
 
 
 def leaderboard(set_id, since=None, limit=50):
-    """Najlepszy wynik jednej gry każdego gracza, malejąco."""
     best = func.max(Game.total_score).label("best")
     rows = (
         _ranked_games(set_id, since)
@@ -48,7 +46,6 @@ def leaderboard(set_id, since=None, limit=50):
 
 
 def position(user_id, set_id, since=None):
-    """Miejsce gracza w rankingu (1 = najlepszy) i jego najlepszy wynik, albo (None, None)."""
     games = _ranked_games(set_id, since)
     mine = games.filter(Game.user_id == user_id).with_entities(func.max(Game.total_score)).scalar()
     if mine is None:

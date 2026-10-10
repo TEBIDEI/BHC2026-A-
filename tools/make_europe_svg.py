@@ -1,8 +1,3 @@
-"""Generuje app/templates/_europe_map.html — mapę Europy (SVG) do animacji logowania.
-
-Kontury: world-atlas (Natural Earth, domena publiczna), rzut azymutalny równopolowy
-Lamberta wyśrodkowany na Europie. Uruchom raz: python tools/make_europe_svg.py
-"""
 import json
 import math
 import urllib.request
@@ -13,10 +8,9 @@ OUT = Path(__file__).resolve().parent.parent / "app" / "templates" / "_europe_ma
 
 WIDTH, HEIGHT = 800, 640
 LAT0, LON0 = math.radians(52), math.radians(14)
-VIEW = (-24, 34, 44, 71)  # lon_min, lat_min, lon_max, lat_max — co ma się zmieścić w kadrze
-KEEP = (-35, 25, 60, 80)  # państwa, które w ogóle rysujemy (bbox)
+VIEW = (-24, 34, 44, 71)
+KEEP = (-35, 25, 60, 80)
 
-# Ikony (symbole w szablonie) na mapie, w kolejności trasy podróży.
 LANDMARKS = [
     ("i-bigben", "Londyn", 51.50, -0.12),
     ("i-windmill", "Kinderdijk", 51.88, 4.64),
@@ -95,7 +89,7 @@ def ring_path(coords, project):
         p = project(lon, lat)
         if p is None:
             continue
-        if last and math.dist(p, last) < 2.2:  # upraszczanie: pomijamy punkty bliżej niż ~2 px
+        if last and math.dist(p, last) < 2.2:
             continue
         out.append(p)
         last = p
@@ -103,7 +97,7 @@ def ring_path(coords, project):
         return ""
     xs, ys = [p[0] for p in out], [p[1] for p in out]
     if max(xs) < -50 or min(xs) > WIDTH + 50 or max(ys) < -50 or min(ys) > HEIGHT + 50:
-        return ""  # wyspa/ląd całkiem poza kadrem
+        return ""
     return "M" + "L".join(f"{x:.0f} {y:.0f}" for x, y in out) + "Z"
 
 
@@ -125,7 +119,6 @@ def main():
             if d:
                 parts.append(d)
         if parts:
-            # Środek ciężkości (przybliżony) — do opóźnienia animacji od środka mapy na zewnątrz.
             nums = [float(v) for d in parts for v in d.replace("M", " ").replace("L", " ").replace("Z", " ").split()]
             cx, cy = sum(nums[0::2]) / len(nums[0::2]), sum(nums[1::2]) / len(nums[1::2])
             dist = math.dist((cx, cy), (WIDTH / 2, HEIGHT / 2))
@@ -150,7 +143,6 @@ def main():
     )
 
     OUT.write_text(
-        "{# Wygenerowane przez tools/make_europe_svg.py — nie edytuj ręcznie. Kontury: Natural Earth. #}\n"
         f'<g class="countries">\n{country_svg}\n  </g>\n'
         f'  <mask id="route-mask"><path class="route-reveal" pathLength="1" d="{route}"/></mask>\n'
         f'  <path class="route" mask="url(#route-mask)" d="{route}"/>\n'
