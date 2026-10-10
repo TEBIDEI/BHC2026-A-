@@ -44,7 +44,7 @@ cp .env.example .env
 
 Postgres z PostGIS (`postgis/postgis:16-3.4-alpine`) działa na porcie **5433** (`geo` / `geo`, baza `cultureguessr`).
 
-`flask seed` dodaje 4 zestawy (Stroje ludowe, Smaki Europy, Języki i pisma, Zabytki) i 42 pytania. Można go uruchamiać wielokrotnie, a istniejące pytania dostają tylko brakujące fakty i zestawy.
+`flask seed` dodaje 4 zestawy (Stroje ludowe, Smaki Europy, Języki i pisma, Zabytki) i 200 pytań (po 50 w każdym). Można go uruchamiać wielokrotnie, a istniejące pytania dostają tylko brakujące fakty i zestawy.
 
 ### Masz bazę sprzed migracji?
 
