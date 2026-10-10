@@ -1,0 +1,17 @@
+{
+  "name": "CultureGuessr",
+  "short_name": "CultureGuessr",
+  "description": "Zgadnij, z którego regionu Europy pochodzi potrawa, strój albo napis.",
+  "lang": "pl",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F4ECD8",
+  "theme_color": "#704214",
+  "icons": [
+    { "src": "/static/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/static/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

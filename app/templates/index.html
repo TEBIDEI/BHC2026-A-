@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="/">{{ app_name }}</a>
+  <div class="stats" id="stats" hidden>
+    <span>runda <b id="stat-round">1 z 10</b></span>
+    <span><b id="stat-score">0</b> pkt</span>
+  </div>
+</header>
+
+<main>
+  <!-- Ekran startowy -->
+  <section class="start" id="screen-start">
+    <form class="page" id="start-form">
+      <p class="hand start-kicker">notatnik podróżnika po Europie</p>
+      <h1>Skąd to pochodzi?</h1>
+      <p class="lead">Potrawy, stroje, napisy i zwyczaje. Obejrzyj zdjęcie, postaw krzyżyk na mapie — im bliżej trafisz, tym więcej punktów, do 5000 za rundę.</p>
+
+      <fieldset>
+        <legend>Kategoria</legend>
+        <div class="chips" id="category-chips">
+          <label class="chip"><input type="radio" name="category" value="" checked><span>Wszystko <small id="count-all"></small></span></label>
+        </div>
+      </fieldset>
+
+      <fieldset>
+        <legend>Liczba rund</legend>
+        <div class="chips">
+          <label class="chip"><input type="radio" name="rounds" value="5"><span>5</span></label>
+          <label class="chip"><input type="radio" name="rounds" value="10" checked><span>10</span></label>
+        </div>
+      </fieldset>
+
+      <button class="btn btn-primary" type="submit" id="start-btn">Ruszaj w drogę</button>
+      <p class="form-error" id="start-error" hidden></p>
+    </form>
+  </section>
+
+  <!-- Runda -->
+  <section class="play" id="screen-play" hidden>
+    <div class="photo" id="photo" title="Kliknij, aby powiększyć">
+      <figure class="print" id="print">
+        <img id="photo-img" alt="Zdjęcie do odgadnięcia" class="loading">
+        <figcaption>
+          <span class="hand" id="photo-tag"></span>
+          <span class="credit" id="photo-credit" hidden></span>
+        </figcaption>
+      </figure>
+    </div>
+    <div class="map-wrap">
+      <div id="map" aria-label="Mapa Europy — kliknij, aby zgadnąć"></div>
+      <div class="guess-bar" id="guess-bar">
+        <button class="btn btn-primary" id="guess-btn" disabled>Kliknij na mapie</button>
+      </div>
+      <div class="result sheet" id="result" hidden>
+        <div class="stamp" id="result-stamp" aria-live="polite"><b id="result-points">0</b><span>punktów</span></div>
+        <p class="hand result-distance" id="result-distance"></p>
+        <h3 id="result-title"></h3>
+        <div class="where" id="result-where"></div>
+        <p class="result-desc" id="result-desc"></p>
+        <button class="btn btn-primary btn-block" id="next-btn">Następna runda</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Podsumowanie -->
+  <section class="summary" id="screen-summary" hidden>
+    <div class="summary-map-wrap"><div id="summary-map"></div></div>
+    <div class="summary-body">
+      <div class="summary-head">
+        <div>
+          <p class="hand start-kicker">koniec podróży</p>
+          <h1>Twój wynik</h1>
+          <p class="muted">na <span id="summary-max">50 000</span> możliwych punktów</p>
+        </div>
+        <div class="stamp stamp-lg" id="summary-stamp"><b id="summary-total">0</b><span>punktów</span></div>
+      </div>
+      <ol class="rounds" id="summary-rounds"></ol>
+      <div class="summary-actions">
+        <button class="btn btn-primary" id="again-btn">Zagraj ponownie</button>
+        <button class="btn" id="menu-btn">Zmień kategorię</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<div class="lightbox" id="lightbox" hidden><img alt=""></div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/game.js') }}"></script>
+{% endblock %}

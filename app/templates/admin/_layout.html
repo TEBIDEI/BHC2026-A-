@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block body %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('admin.index') }}">{{ app_name }} <span class="hand brand-sub">panel</span></a>
+  <nav>
+    <a href="{{ url_for('admin.index') }}">Pytania</a>
+    <a href="{{ url_for('admin.new') }}">+ Dodaj</a>
+    <a href="/" target="_blank">Gra ↗</a>
+  </nav>
+</header>
+<main class="admin-main">
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <ul class="flashes">
+        {% for cat, msg in messages %}<li class="flash flash-{{ cat }}">{{ msg }}</li>{% endfor %}
+      </ul>
+    {% endif %}
+  {% endwith %}
+  {% block admin %}{% endblock %}
+</main>
+{% endblock %}

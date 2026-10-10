@@ -1,0 +1,81 @@
+{% extends "admin/_layout.html" %}
+{% block title %}{{ 'Edytuj' if question.id else 'Nowe pytanie' }} — {{ app_name }}{% endblock %}
+{% block admin %}
+<div class="admin-head">
+  <h1>{{ 'Edytuj: ' ~ question.title if question.id else 'Nowe pytanie' }}</h1>
+  <span class="muted small"><span class="kbd">Ctrl</span>+<span class="kbd">V</span> wkleja zdjęcie · <span class="kbd">Ctrl</span>+<span class="kbd">Enter</span> zapisuje</span>
+</div>
+
+<form method="post" enctype="multipart/form-data" id="question-form">
+  <div class="edit-grid">
+    <div class="card">
+      <div class="field">
+        <label>Zdjęcie</label>
+        <label class="dropzone" id="dropzone">
+          <img id="preview" src="{{ question.image_src or '' }}" alt="" {% if not question.image_src %}hidden{% endif %}>
+          <span id="drop-hint">Przeciągnij zdjęcie tutaj, kliknij albo wklej <span class="kbd">Ctrl+V</span></span>
+          <input type="file" name="image_file" id="image-file" accept="image/*">
+        </label>
+      </div>
+      <div class="field">
+        <label for="image-url">…albo URL zdjęcia</label>
+        <input type="url" name="image_url" id="image-url" value="{{ question.image_url or '' }}" placeholder="https://…">
+      </div>
+      <div class="field">
+        <label for="image-credit">Autor / licencja zdjęcia</label>
+        <input type="text" name="image_credit" id="image-credit" value="{{ question.image_credit or '' }}" placeholder="np. Jan Kowalski, CC BY-SA 4.0">
+      </div>
+
+      <div class="field">
+        <label for="title">Co jest na zdjęciu? (odpowiedź)</label>
+        <input type="text" name="title" id="title" value="{{ question.title or '' }}" placeholder="np. Pierogi" required>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label for="category">Kategoria</label>
+          <select name="category" id="category">
+            {% for key, label in categories.items() %}
+              <option value="{{ key }}" {% if key == question.category %}selected{% endif %}>{{ label }}</option>
+            {% endfor %}
+          </select>
+        </div>
+        <div class="field" style="display:flex;align-items:flex-end">
+          <label class="check"><input type="checkbox" name="active" {% if question.active %}checked{% endif %}> Aktywne w grze</label>
+        </div>
+      </div>
+      <div class="field">
+        <label for="description">Ciekawostka (pokazywana po odpowiedzi)</label>
+        <textarea name="description" id="description" placeholder="Jedno, dwa zdania.">{{ question.description or '' }}</textarea>
+      </div>
+    </div>
+
+    <div class="card">
+      <label for="geo-q">Lokalizacja odpowiedzi</label>
+      <div class="geo-search">
+        <input type="search" id="geo-q" placeholder="Szukaj miejsca, np. Łowicz…" autocomplete="off">
+        <ul class="geo-results" id="geo-results" hidden></ul>
+      </div>
+      <div class="picker-map" id="picker-map"></div>
+      <p class="muted small" style="margin:.4rem 0 0">Kliknij na mapie lub przeciągnij pinezkę.</p>
+      <div class="coords">
+        <input type="number" step="any" name="lat" id="lat" value="{{ question.lat if question.lat is not none else '' }}" placeholder="szer. (lat)" required>
+        <input type="number" step="any" name="lng" id="lng" value="{{ question.lng if question.lng is not none else '' }}" placeholder="dł. (lng)" required>
+      </div>
+      <div class="field" style="margin-top:1rem">
+        <label for="location-name">Nazwa miejsca (pokazywana graczowi)</label>
+        <input type="text" name="location_name" id="location-name" value="{{ question.location_name or '' }}" placeholder="np. Łowicz, Polska" required>
+      </div>
+    </div>
+  </div>
+
+  <div class="form-actions">
+    <button class="btn btn-primary" type="submit" name="next" value="list">Zapisz</button>
+    <button class="btn" type="submit" name="next" value="another">Zapisz i dodaj kolejne</button>
+    <a class="btn" href="{{ url_for('admin.index') }}">Anuluj</a>
+  </div>
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}
